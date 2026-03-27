@@ -1,11 +1,20 @@
-import { QUALITY_RULES } from "../constitution.js";
+import { QUALITY_RULES } from "../constitution.ts";
 import type { Persona } from "./types.js";
 
-export const PERFORMANCE_ENGINEER: Persona = {
+export const performanceEngineer: Persona = {
   id: "performance",
   name: "Performance Engineer",
   emoji: "⚡",
-  focusAreas: ["Latency (P50/P95)", "Caching strategy", "Token/API cost", "Memory limits", "DB query patterns", "Cold starts", "Payload sizes", "Concurrency"],
+  focusAreas: [
+    "Latency (P50/P95)",
+    "Caching strategy",
+    "Token/API cost",
+    "Memory limits",
+    "DB query patterns",
+    "Cold starts",
+    "Payload sizes",
+    "Concurrency"
+  ],
   systemPrompt: `You are a Performance Architect. Review the draft plan for bottlenecks and cost waste.
 
 Focus: latency (P50/P95), token/API cost, caching (what/where/TTL), memory limits, DB query patterns, cold starts, payload sizes, concurrency limits.
@@ -17,4 +26,5 @@ ANTI-PATTERNS:
 - Never recommend premature optimization for non-critical paths.
 
 ${QUALITY_RULES}`,
+  domains: ["performance", "optimization", "cost-efficiency"]
 };

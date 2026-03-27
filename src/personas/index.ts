@@ -3,91 +3,65 @@
  * 
  * This module exports all persona definitions and provides
  * centralized persona collections for the konsilio system.
- * 
- * Each persona represents an expert role with specific expertise,
- * considerations, tools, and evaluation criteria.
  */
 
-// Import personas for collection
-import { uxDxDesigner as uxDxDesignerPersona } from './ux-dx.js';
-import { devopsEngineer as devopsEngineerPersona } from './devops.js';
-import { leadArchitect as leadArchitectPersona } from './lead.js';
+import type { Persona } from './types.js';
+import { uxDxDesigner } from './ux-dx.js';
+import { devopsEngineer } from './devops.js';
+import { leadArchitect } from './lead.js';
+import { performanceEngineer } from './performance.js';
+import { securityArchitect } from './security.js';
 
 // Export individual personas
 export { uxDxDesigner } from './ux-dx.js';
 export { devopsEngineer } from './devops.js';
 export { leadArchitect } from './lead.js';
+export { performanceEngineer } from './performance.js';
+export { securityArchitect } from './security.js';
+
+// Export types
+export * from './types.js';
 
 /**
- * Persona type definition
- * Represents a complete persona configuration
+ * All expert personas (excludes lead architect)
  */
-export interface Persona {
-  id: string;
-  name: string;
-  role: string;
-  model: string;
-  systemPrompt: string;
-  expertise: string[];
-  considerations: string[];
-  tools: string[];
-  domains: string[];
-  principles: string[];
-  frameworks: string[];
-  evaluationCriteria: {
-    userExperience?: string[];
-    developerExperience?: string[];
-    accessibility?: string[];
-    [key: string]: string[] | undefined;
-  };
-  communicationStyle: {
-    tone: string;
-    focus: string;
-    detailLevel: string;
-    examples: string;
-  };
-  collaboration: {
-    withOtherExperts: string[];
-    deliverables: string[];
-  };
-}
+export const expertPersonas: Persona[] = [
+  securityArchitect,
+  performanceEngineer,
+  uxDxDesigner,
+  devopsEngineer,
+];
+
+/**
+ * All personas including lead architect
+ */
+export const allPersonas: Persona[] = [
+  ...expertPersonas,
+  leadArchitect,
+];
 
 /**
  * PersonaCollection - A registry of all available personas
- * Provides convenient access to persona groups and search functionality
  */
 export const PersonaCollection = {
   /**
    * All available personas
    */
-  all: [
-    uxDxDesignerPersona,
-    devopsEngineerPersona,
-    leadArchitectPersona,
-  ] as Persona[],
+  all: allPersonas,
 
   /**
    * Get a persona by its ID
    */
   getById(id: string): Persona | undefined {
-    return this.all.find(persona => persona.id === id);
+    return this.all.find((persona: Persona) => persona.id === id);
   },
 
   /**
-   * Get personas by domain expertise
+   * Get personas by domain expertise (if domains are defined)
    */
   getByDomain(domain: string): Persona[] {
-    return this.all.filter(persona => 
-      persona.domains.some(d => d.toLowerCase().includes(domain.toLowerCase()))
-    );
-  },
-
-  /**
-   * Get personas by tool capability
-   */
-  getByTool(tool: string): Persona[] {
-    return this.all.filter(persona =>
-      persona.tools.some(t => t.toLowerCase().includes(tool.toLowerCase()))
+    return this.all.filter((persona: Persona) => 
+      (persona.domains?.some((d: string) => d.toLowerCase().includes(domain.toLowerCase())) ?? false)
     );
   },
 
@@ -96,56 +70,23 @@ export const PersonaCollection = {
    */
   getAllDomains(): string[] {
     const domains = new Set<string>();
-    this.all.forEach(persona => {
-      persona.domains.forEach(domain => domains.add(domain));
+    this.all.forEach((persona: Persona) => {
+      persona.domains?.forEach((domain: string) => domains.add(domain));
     });
     return Array.from(domains).sort();
   },
 
   /**
-   * Get all unique tools across all personas
-   */
-  getAllTools(): string[] {
-    const tools = new Set<string>();
-    this.all.forEach(persona => {
-      persona.tools.forEach(tool => tools.add(tool));
-    });
-    return Array.from(tools).sort();
-  },
-
-  /**
-   * Get all unique principles across all personas
-   */
-  getAllPrinciples(): string[] {
-    const principles = new Set<string>();
-    this.all.forEach(persona => {
-      persona.principles.forEach(principle => principles.add(principle));
-    });
-    return Array.from(principles).sort();
-  },
-
-  /**
-   * Get all unique expertise areas across all personas
-   */
-  getAllExpertise(): string[] {
-    const expertise = new Set<string>();
-    this.all.forEach(persona => {
-      persona.expertise.forEach(e => expertise.add(e));
-    });
-    return Array.from(expertise).sort();
-  },
-
-  /**
-   * Search personas by query (matches name, role, domains, expertise)
+   * Search personas by query (matches name, id, or domains)
    */
   search(query: string): Persona[] {
     const lowerQuery = query.toLowerCase();
-    return this.all.filter(persona =>
-      persona.name.toLowerCase().includes(lowerQuery) ||
-      persona.role.toLowerCase().includes(lowerQuery) ||
-      persona.domains.some(d => d.toLowerCase().includes(lowerQuery)) ||
-      persona.expertise.some(e => e.toLowerCase().includes(lowerQuery))
-    );
+    return this.all.filter((persona: Persona) => {
+      const matchesName = persona.name.toLowerCase().includes(lowerQuery);
+      const matchesId = persona.id.toLowerCase().includes(lowerQuery);
+      const matchesDomain = persona.domains?.some((d: string) => d.toLowerCase().includes(lowerQuery)) ?? false;
+      return matchesName || matchesId || matchesDomain;
+    });
   }
 };
 
