@@ -4,7 +4,10 @@
  * Outputs structured JSON logs for observability and debugging.
  */
 
-export type LogLevel = 'debug' | 'info' | 'warn' | 'error';
+import type { LogLevel } from './config.js';
+
+// Re-export LogLevel for backward compatibility
+export type { LogLevel };
 
 interface LogEntry {
   timestamp: string;
@@ -121,9 +124,9 @@ export class CorrelatedLogger implements LogWriter {
 }
 
 /**
- * Create a logger instance from environment configuration
+ * Create a logger instance with the specified log level
+ * @param level - Optional log level (defaults to 'info')
  */
 export function createLogger(level?: LogLevel): Logger {
-  const logLevel = level ?? (process.env['LOG_LEVEL'] as LogLevel) ?? 'info';
-  return new Logger({ level: logLevel });
+  return new Logger({ level: level ?? 'info' });
 }

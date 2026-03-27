@@ -17,46 +17,12 @@ import { CacheService } from './cache.js';
 import { CouncilOrchestrator, type CouncilParams, type CouncilOptions } from './orchestrator.js';
 import { expertPersonas, leadArchitect } from './personas/index.js';
 import { SCHEMA } from './db/schema.js';
-import { config as appConfig } from './config.js';
-
-// ─── Configuration from Environment ───
-
-interface ServerConfig {
-  port: number;
-  logLevel: 'debug' | 'info' | 'warn' | 'error';
-  nodeEnv: 'development' | 'production' | 'test';
-  openrouterApiKey: string;
-  openrouterBaseUrl: string;
-  databasePath: string;
-  enabledPersonaIds: string[];
-  models: { experts: string; lead: string; debate: string };
-  timeouts: { expertMs: number; leadMs: number; debateMs: number };
-  maxDraftPlanLength: number;
-}
-
-function loadConfig(): ServerConfig {
-  return {
-    port: parseInt(process.env['PORT'] ?? '3000', 10),
-    logLevel: (process.env['LOG_LEVEL'] as ServerConfig['logLevel']) ?? 'info',
-    nodeEnv: (process.env['NODE_ENV'] as ServerConfig['nodeEnv']) ?? 'development',
-    openrouterApiKey: process.env['OPENROUTER_API_KEY'] ?? '',
-    openrouterBaseUrl: 'https://openrouter.ai/api/v1',
-    databasePath: process.env['DATABASE_PATH'] ?? './data/council.db',
-    enabledPersonaIds: ['security', 'performance', 'ux-dx', 'devops'],
-    models: {
-      experts: process.env['EXPERT_MODEL'] ?? 'google/gemini-2.5-flash-lite',
-      lead: process.env['LEAD_MODEL'] ?? 'google/gemini-2.5-pro',
-      debate: process.env['DEBATE_MODEL'] ?? 'google/gemini-2.5-flash-lite',
-    },
-    timeouts: { expertMs: 90_000, leadMs: 120_000, debateMs: 60_000 },
-    maxDraftPlanLength: parseInt(process.env['DRAFT_PLAN_MAX_LENGTH'] ?? '12000', 10),
-  };
-}
+import { config, validateConfig } from './config.js';
 
 // ─── Composition Root ───
 
 interface AppDeps {
-  config: ServerConfig;
+  config: typeof config;
   logger: Logger;
   sqliteGateway: SQLiteGateway;
   openRouterGateway: OpenRouterGateway;
@@ -64,23 +30,26 @@ interface AppDeps {
   orchestrator: CouncilOrchestrator;
 }
 
-function composeDependencies(cfg: ServerConfig): AppDeps {
+function composeDependencies(): AppDeps {
+  // Validate configuration
+  validateConfig();
+
   // Logger
-  const logger = createLogger(cfg.logLevel);
+  const logger = createLogger(config.logLevel);
 
   // SQLite Gateway
-  const sqliteGateway = new SQLiteGateway(cfg.databasePath, logger);
+  const sqliteGateway = new SQLiteGateway(config.databasePath, logger);
   sqliteGateway.initialize(SCHEMA);
 
   // OpenRouter Gateway
   const openRouterGateway = new OpenRouterGateway(
-    cfg.openrouterApiKey,
-    cfg.openrouterBaseUrl,
+    config.openrouterApiKey,
+    config.openrouterBaseUrl,
     logger
   );
 
-  // Cache Service
-  const cacheService = new CacheService(60_000);
+  // Cache Service (uses cacheTtlSeconds from config, converted to milliseconds)
+  const cacheService = new CacheService(config.cacheTtlSeconds * 1000);
 
   // Council Orchestrator
   const orchestrator = new CouncilOrchestrator({
@@ -91,14 +60,14 @@ function composeDependencies(cfg: ServerConfig): AppDeps {
     expertPersonas,
     leadPersona: leadArchitect,
     config: {
-      enabledPersonaIds: cfg.enabledPersonaIds,
-      models: cfg.models,
-      timeouts: cfg.timeouts,
-      maxDraftPlanLength: cfg.maxDraftPlanLength,
+      enabledPersonaIds: config.enabledPersonas,
+      models: config.models,
+      timeouts: config.timeouts,
+      maxDraftPlanLength: config.maxDraftPlanLength,
     },
   });
 
-  return { config: cfg, logger, sqliteGateway, openRouterGateway, cacheService, orchestrator };
+  return { config, logger, sqliteGateway, openRouterGateway, cacheService, orchestrator };
 }
 
 // ─── HTTP Server ───
@@ -249,12 +218,11 @@ function readBody(req: IncomingMessage): Promise<string> {
 // ─── Main Entry Point ───
 
 export function main(): void {
-  const cfg = loadConfig();
-  const deps = composeDependencies(cfg);
+  const deps = composeDependencies();
   const server = createHttpServer(deps);
 
-  server.listen(cfg.port, () => {
-    deps.logger.info('Server started', { port: cfg.port, nodeEnv: cfg.nodeEnv });
+  server.listen(deps.config.port, () => {
+    deps.logger.info('Server started', { port: deps.config.port, nodeEnv: deps.config.nodeEnv });
   });
 
   // Graceful shutdown
