@@ -1,4 +1,4 @@
-import { COUNCIL_RULES, CONSTITUTION_LAYER_1 } from "../constitution.ts";
+import { COUNCIL_RULES, CONSTITUTION_LAYER_1 } from "../constitution.js";
 import type { Persona } from "./types.ts";
 
 export const securityArchitect: Persona = {

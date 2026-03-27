@@ -9,7 +9,12 @@ npm install better-sqlite3
 npm install -D @types/better-sqlite3
 ```
 
-> Requires `build-essential` and `python3` on Linux for native compilation.
+> **Note on prebuilt binaries**: `better-sqlite3` includes prebuilt binaries for `linux-x64` (glibc) and other common platforms. For Node.js 20.x on standard Debian, **no compilation is needed** - the prebuilt is downloaded automatically via `prebuild-install`.
+>
+> Compilation tools (`build-essential`, `python3`) are only required if:
+> - Prebuilt download fails (network issues)
+> - Running on an exotic platform without prebuilts
+> - You add other native modules that lack prebuilts
 
 ## Step 7.2: Inline Schema
 
