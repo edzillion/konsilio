@@ -2,9 +2,15 @@
  * Council Orchestrator - Dependency Injection Root
  * 
  * Coordinates the council of experts analysis with all dependencies injected.
+ * Features:
+ * - Parallel expert analysis with caching
+ * - Graceful partial failure handling
+ * - Debate mode for expert refinement
+ * - Lead Architect synthesis
+ * - Correlation ID support for request tracing
  */
 
-import { randomUUID } from 'node:crypto';
+import { randomUUID, createHash } from 'node:crypto';
 import type { LogWriter, Logger, CorrelatedLogger } from './logger.js';
 import type { SQLiteGateway, OpenRouterGateway } from './gateway.js';
 import type { CacheService } from './cache.js';
@@ -159,9 +165,26 @@ export class CouncilOrchestrator {
   }
 
   private async callExpert(persona: Persona, model: string, userMessage: string, timeoutMs: number, log: LogWriter): Promise<ExpertReport> {
+    // Generate cache key from persona ID and input hash
+    const inputHash = createHash('sha256').update(userMessage).digest('hex').slice(0, 16);
+    const cacheKey = `expert:${persona.id}:${inputHash}`;
+    
+    // Check cache first
+    const cached = this.deps.cacheService.get<ExpertReport>(cacheKey);
+    if (cached) {
+      log.debug('Cache hit for expert', { personaId: persona.id, cacheKey });
+      return { ...cached, durationMs: 0 }; // Indicate cached response
+    }
+    
     const start = Date.now();
     const messages: Message[] = [{ role: 'system', content: persona.systemPrompt }, { role: 'user', content: userMessage }];
     const content = await this.deps.openRouterGateway.call({ model, messages, maxTokens: 4096, temperature: 0.3, timeoutMs });
-    return { personaId: persona.id, personaName: persona.name, personaEmoji: persona.emoji, content, durationMs: Date.now() - start, modelUsed: model };
+    const report: ExpertReport = { personaId: persona.id, personaName: persona.name, personaEmoji: persona.emoji, content, durationMs: Date.now() - start, modelUsed: model };
+    
+    // Cache the result (default TTL from CacheService)
+    this.deps.cacheService.set(cacheKey, report);
+    log.debug('Cached expert response', { personaId: persona.id, cacheKey });
+    
+    return report;
   }
 }
