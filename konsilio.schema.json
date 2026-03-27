@@ -1,0 +1,42 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Konsilio Configuration",
+  "type": "object",
+  "properties": {
+    "personas": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": ["security", "performance", "ux-dx", "devops", "typescript"]
+          },
+          "minItems": 2,
+          "description": "Expert personas to include in council consultations"
+        }
+      },
+      "required": ["enabled"]
+    },
+    "models": {
+      "type": "object",
+      "properties": {
+        "experts": { "type": "string", "description": "Model for expert personas" },
+        "lead": { "type": "string", "description": "Model for lead architect" },
+        "debate": { "type": "string", "description": "Model for debate round" }
+      }
+    },
+    "timeouts": {
+      "type": "object",
+      "properties": {
+        "expertMs": { "type": "integer", "minimum": 10000 },
+        "leadMs": { "type": "integer", "minimum": 30000 },
+        "debateMs": { "type": "integer", "minimum": 10000 }
+      }
+    },
+    "maxDraftPlanLength": { "type": "integer", "minimum": 1000 },
+    "maxHistorySessions": { "type": "integer", "minimum": 1, "maximum": 100 },
+    "databasePath": { "type": "string" }
+  },
+  "required": ["personas"]
+}

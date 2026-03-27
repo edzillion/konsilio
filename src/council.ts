@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { config } from "./config.js";
 import { callOpenRouter, type Message } from "./openrouter.js";
-import { expertPersonas, leadArchitect } from "./personas/index.js";
+import { expertPersonas, leadArchitect, PersonaCollection } from "./personas/index.js";
 import {
   type Persona,
   type ExpertReport,
@@ -100,7 +100,18 @@ export async function runCouncil(
 
   const expertModel = options?.modelOverride?.experts ?? config.models.experts ?? "google/gemini-2.5-flash-lite";
   const leadModel = options?.modelOverride?.lead ?? config.models.lead ?? "google/gemini-2.5-pro";
-  const personas = expertPersonas;
+  
+  // Filter personas based on config
+  const personas = expertPersonas.filter((p) =>
+    config.enabledPersonas.includes(p.id)
+  );
+  
+  if (personas.length < 2) {
+    throw new Error(
+      `At least 2 personas must be enabled. Found: ${config.enabledPersonas.join(", ")}`
+    );
+  }
+  
   const userMessage = buildUserMessage(params);
 
   // ── Phase 1: Parallel Expert Analysis ──

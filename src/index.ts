@@ -6,6 +6,7 @@ import { z } from "zod";
 import { config } from "./config.js";
 import { runCouncil } from "./council.js";
 import { allPersonas } from "./personas/index.js";
+import * as db from "./db/index.js";
 
 const server = new McpServer({
   name: "konsilio",
@@ -71,6 +72,13 @@ who analyze in parallel, then a Lead Architect synthesizes their findings.`,
         { debateMode: params.debate_mode }
       );
 
+      // Save to database (non-blocking, failures are silent)
+      try {
+        db.saveCouncilResult(result, draftPlan, params.tech_stack, params.context_constraints);
+      } catch {
+        // Persistence failure is non-fatal
+      }
+
       return {
         content: [{ type: "text" as const, text: result.finalBlueprint }],
       };
@@ -81,6 +89,32 @@ who analyze in parallel, then a Lead Architect synthesizes their findings.`,
         isError: true,
       };
     }
+  }
+);
+
+// ─── Session History ───
+
+server.tool(
+  "get_session_history",
+  "Retrieve previous council session summaries.",
+  {
+    limit: z.number().min(1).max(50).default(10).describe("Number of sessions to retrieve"),
+  },
+  async (params) => {
+    const sessions = db.getRecentSessions(params.limit);
+    if (sessions.length === 0) {
+      return { content: [{ type: "text" as const, text: "No previous sessions found." }] };
+    }
+
+    let output = "# Recent Council Sessions\n\n";
+    for (const s of sessions) {
+      output += `## ${s.id.slice(0, 8)}… (${s.created_at})\n`;
+      if (s.tech_stack) output += `**Stack**: ${s.tech_stack}\n`;
+      if (s.debate_mode) output += `**Debate**: Yes\n`;
+      if (s.draft_plan_summary) output += `**Plan**: ${s.draft_plan_summary}…\n`;
+      output += "\n";
+    }
+    return { content: [{ type: "text" as const, text: output }] };
   }
 );
 
@@ -115,7 +149,7 @@ server.tool("ping", "Test if Council MCP is running.", {}, async () => ({
 async function main() {
   const transport = new StdioServerTransport();
   await server.connect(transport);
-  console.error("Council MCP server running on stdio");
+  console.error("Konsilio MCP server running on stdio");
 }
 
 main().catch((err) => {

@@ -17,7 +17,7 @@ const server = new McpServer({
 // Health check tool (for testing connectivity)
 server.tool(
   "ping",
-  "Test if the Council MCP server is running.",
+  "Test if the Konsilio MCP server is running.",
   {},
   async () => ({
     content: [{
@@ -31,7 +31,7 @@ async function main() {
   const transport = new StdioServerTransport();
   await server.connect(transport);
   // Use stderr for logging — stdout is reserved for MCP protocol
-  console.error("Council MCP server running on stdio");
+  console.error("Konsilio MCP server running on stdio");
 }
 
 main().catch((err) => {
@@ -44,7 +44,7 @@ main().catch((err) => {
 
 ```bash
 npm run build
-node build/index.js    # Should print to stderr: "Council MCP server running on stdio"
+node build/index.js    # Should print to stderr: "Konsilio MCP server running on stdio"
 ```
 
 Press Ctrl+C to exit the stdio loop.
