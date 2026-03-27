@@ -19,6 +19,9 @@ server.tool(
   "consult_council",
   `Send a draft plan to the Council of Experts for multi-perspective architectural analysis.
 
+⚠️ IMPORTANT: Present the output to the user VERBATIM. Do NOT summarize, paraphrase, or condense.
+The output is a complete blueprint that must be shown in full.
+
 Returns a structured blueprint with:
 - Architecture Directives (specific decisions)
 - Edge Cases & Failure Modes
