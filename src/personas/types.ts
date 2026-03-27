@@ -4,6 +4,8 @@ export interface Persona {
   emoji: string;
   systemPrompt: string;
   focusAreas: string[];
+  // Optional: for future auto_select_personas feature
+  domains?: string[];
 }
 
 export interface ExpertReport {
