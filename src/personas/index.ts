@@ -11,10 +11,12 @@
 // Import personas for collection
 import { uxDxDesigner as uxDxDesignerPersona } from './ux-dx.js';
 import { devopsEngineer as devopsEngineerPersona } from './devops.js';
+import { leadArchitect as leadArchitectPersona } from './lead.js';
 
 // Export individual personas
 export { uxDxDesigner } from './ux-dx.js';
 export { devopsEngineer } from './devops.js';
+export { leadArchitect } from './lead.js';
 
 /**
  * Persona type definition
@@ -61,6 +63,7 @@ export const PersonaCollection = {
   all: [
     uxDxDesignerPersona,
     devopsEngineerPersona,
+    leadArchitectPersona,
   ] as Persona[],
 
   /**
