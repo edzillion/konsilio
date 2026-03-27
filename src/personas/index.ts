@@ -11,6 +11,7 @@ import { devopsEngineer } from './devops.js';
 import { leadArchitect } from './lead.js';
 import { performanceEngineer } from './performance.js';
 import { securityArchitect } from './security.js';
+import { typescriptEngineer } from './typescript-engineer.js';
 
 // Export individual personas
 export { uxDxDesigner } from './ux-dx.js';
@@ -18,6 +19,7 @@ export { devopsEngineer } from './devops.js';
 export { leadArchitect } from './lead.js';
 export { performanceEngineer } from './performance.js';
 export { securityArchitect } from './security.js';
+export { typescriptEngineer } from './typescript-engineer.js';
 
 // Export types
 export * from './types.js';
@@ -30,6 +32,7 @@ export const expertPersonas: Persona[] = [
   performanceEngineer,
   uxDxDesigner,
   devopsEngineer,
+  typescriptEngineer,
 ];
 
 /**

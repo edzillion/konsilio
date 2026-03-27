@@ -123,7 +123,7 @@ server.tool("ping", "Test if Council MCP is running.", {}, async () => ({
 async function main() {
   const transport = new StdioServerTransport();
   await server.connect(transport);
-  console.error("Council MCP server running on stdio");
+  console.error("Konsilio MCP server running on stdio");
 }
 
 main().catch((err) => {

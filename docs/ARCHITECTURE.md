@@ -1,8 +1,8 @@
-# Council MCP - Architecture Document
+# Konsilio - Architecture Document
 
 ## Overview
 
-Council MCP is a local-first, stateful MCP (Model Context Protocol) server that implements a "Council of Experts" pattern to provide critical, multi-perspective architectural analysis. Unlike standard AI assistants that may act as "yes-men," Council MCP routes every request through multiple expert personas who analyze the plan from different angles, then synthesizes their findings into a unified, actionable blueprint.
+Konsilio is a local-first, stateful MCP (Model Context Protocol) server that implements a "Council of Experts" pattern to provide critical, multi-perspective architectural analysis. Unlike standard AI assistants that may act as "yes-men," Konsilio routes every request through multiple expert personas who analyze the plan from different angles, then synthesizes their findings into a unified, actionable blueprint.
 
 ## Core Philosophy
 
@@ -40,7 +40,7 @@ This means:
                                │ stdio (MCP Protocol — stdin/stdout)
                                ▼
 ┌─────────────────────────────────────────────────────────────────────┐
-│                        Council MCP Server                            │
+│                        Konsilio MCP Server                           │
 │                    (spawned by Cline, lives until VS Code closes)    │
 │                                                                     │
 │  ┌──────────────────────────────────────────────────────────────┐  │
@@ -48,6 +48,7 @@ This means:
 │  │  • consult_council(draft_plan, tech_stack, constraints, ...)  │  │
 │  │  • get_session_history(limit)                                  │  │
 │  │  • list_personas()                                             │  │
+│  │  • ping()                                                      │  │
 │  └──────────────────────────────────────────────────────────────┘  │
 │                               │                                     │
 │                               ▼                                     │
@@ -123,7 +124,6 @@ This means:
    - Current draft plan
    - Tech stack (if provided)
    - Constraints (if provided)
-   - Recent session summaries (if `include_history=true` and persistence is enabled)
 4. **Phase 1**: Expert personas analyze in parallel (with concurrency control)
    - Each expert receives the same input + their domain-specific system prompt
    - Each produces findings in their domain
@@ -138,7 +138,7 @@ This means:
    - Resolves conflicts
    - Produces final blueprint
 7. **Response** returned to MCP client as structured Markdown
-8. **Persistence** (if enabled): Session, messages, and reports saved to SQLite
+8. **Persistence**: Session, messages, and reports saved to SQLite (failures are silent)
 
 ## Component Details
 
@@ -156,11 +156,6 @@ server.tool(
     tech_stack: z.string().optional(),
     context_constraints: z.string().optional(),
     debate_mode: z.boolean().optional().default(false),
-    include_history: z.boolean().optional().default(false),
-    model_override: z.object({
-      experts: z.string().optional(),
-      lead: z.string().optional(),
-    }).optional(),
   },
   async (params) => { /* ... */ }
 );
@@ -180,6 +175,14 @@ server.tool(
   {},
   async () => { /* ... */ }
 );
+
+// Health check
+server.tool(
+  "ping",
+  "Test if Konsilio is running.",
+  {},
+  async () => { /* ... */ }
+);
 ```
 
 ### 2. Council Orchestrator (`src/council.ts`)
@@ -189,11 +192,6 @@ Core orchestration logic:
 ```typescript
 interface CouncilOptions {
   debateMode?: boolean;
-  includeHistory?: boolean;
-  modelOverride?: {
-    experts?: string;
-    lead?: string;
-  };
 }
 
 async function runCouncil(
@@ -216,7 +214,7 @@ async function runCouncil(
     : expertReports;
   const blueprint = await synthesizeBlueprint(params, allReports, options);
   
-  return { expertReports, debateReports, blueprint };
+  return { sessionId, expertReports, debateReports, finalBlueprint: blueprint };
 }
 ```
 
@@ -410,61 +408,39 @@ export const config = {
 - **Context**: Handles 4+ expert reports well
 - **Cost**: $1.25/$10.00 per 1M tokens — 6x cheaper than Sonnet with comparable synthesis quality
 
-### Override for High-Stakes Reviews
-For critical architecture decisions, override the lead model:
-```
-model_override: { lead: "anthropic/claude-3.5-sonnet" }
-```
-This costs ~$0.30-0.50 per call but gives the strongest synthesis available.
-
 ### Debate Model: `google/gemini-2.5-flash-lite`
 - Same as expert models — quick critique rounds at minimal cost
 
 ## Deployment Architecture
 
-### LXC Container Setup
+### Local Deployment (Recommended)
 
-MCP stdio servers are spawned by the client, not run as daemons. The LXC just needs the runtime environment.
+MCP servers are designed to run **locally** on the same machine as the client. They communicate via stdin/stdout - no HTTP server, no ports, no authentication.
 
 ```
-Proxmox Host
-└── LXC Container (Debian 12)
-    ├── Node.js 20.x (or 22.x)
-    ├── build-essential + python3 (for better-sqlite3 compilation)
-    ├── SQLite3
-    └── /opt/konsilio/
-        ├── build/           # Compiled TypeScript
-        ├── data/            # SQLite database (auto-created)
-        ├── .env             # Configuration (optional — can use MCP env instead)
-        └── node_modules/
+Developer Machine
+├── Node.js 20.x (only system requirement)
+├── konsilio/
+│   ├── build/           # Compiled TypeScript
+│   ├── data/            # SQLite database (auto-created)
+│   ├── .env             # Configuration with OPENROUTER_API_KEY
+│   └── node_modules/    # Includes better-sqlite3 prebuilt
+└── VS Code + Cline      # MCP client
 ```
 
-**There is no daemon to manage.** Cline spawns the server process on demand via MCP config.
+**All dependencies are handled through npm**:
+- **better-sqlite3** includes prebuilt binaries for Windows, macOS, and Linux (x64 and ARM64)
+- No system packages needed beyond Node.js
+- No compilation tools required for standard platforms
 
 ### MCP Client Configuration (Cline)
 
 ```json
 {
   "mcpServers": {
-    "council": {
+    "konsilio": {
       "command": "node",
-      "args": ["/opt/konsilio/build/index.js"],
-      "env": {
-        "OPENROUTER_API_KEY": "sk-or-v1-...",
-        "DATABASE_PATH": "/opt/konsilio/data/council.db"
-      }
-    }
-  }
-}
-```
-
-If the LXC is on a different host, use SSH:
-```json
-{
-  "mcpServers": {
-    "council": {
-      "command": "ssh",
-      "args": ["user@proxmox-lxc", "node", "/opt/konsilio/build/index.js"],
+      "args": ["/path/to/konsilio/build/index.js"],
       "env": {
         "OPENROUTER_API_KEY": "sk-or-v1-..."
       }
@@ -472,6 +448,24 @@ If the LXC is on a different host, use SSH:
   }
 }
 ```
+
+**Alternative**: Use a `.env` file in the project directory:
+```
+OPENROUTER_API_KEY=sk-or-v1-...
+```
+
+### Sharing with Others
+
+To share Konsilio with others:
+
+1. **Share the repository**: They clone the same repo
+2. **They get their own API key**: Each person uses their own OpenRouter account
+3. **They configure locally**: Same steps as above
+
+**Benefits**:
+- Each person pays for their own API usage
+- Each person has their own session history
+- No shared credentials or security concerns
 
 ## Error Handling
 
@@ -536,16 +530,15 @@ All errors include actionable guidance:
 |---|---|---|---|
 | Normal (no debate) | 4 × Gemini 2.5 Flash Lite | 1 × Gemini 2.5 Pro | ~$0.02-0.04 |
 | With debate | 8 × Gemini 2.5 Flash Lite | 1 × Gemini 2.5 Pro | ~$0.03-0.06 |
-| Premium lead | 4 × Gemini 2.5 Flash Lite | 1 × Claude 3.5 Sonnet | ~$0.30-0.50 |
 
 **Monthly estimate** at 3-5 runs/day with defaults: **$3-6/month**.
 
 ## Future Enhancements (Out of Scope for MVP)
 
-1. **`auto_select_personas` tool**: AI recommends which experts are relevant for a given plan
-2. **Custom personas via config file**: Domain-specific experts (ML Engineer, Database Architect)
-3. **Streaming responses**: Stream expert outputs as they complete
-4. **Web UI**: Dashboard for viewing history and managing personas
-5. **Cost tracking**: Monitor OpenRouter spending per session
-6. **Search integration**: Web search for supplementary context (reference impl has this as a stub)
-7. **Export/Import**: Backup and restore sessions
+1. **`include_history` parameter**: Feed recent session context to experts
+2. **`model_override` parameter**: Per-request model selection
+3. **`auto_select_personas` tool**: AI recommends which experts are relevant
+4. **Custom personas via config file**: Domain-specific experts (ML Engineer, Database Architect)
+5. **Streaming responses**: Stream expert outputs as they complete
+6. **Web UI**: Dashboard for viewing history and managing personas
+7. **Cost tracking**: Monitor OpenRouter spending per session

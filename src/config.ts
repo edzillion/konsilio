@@ -33,7 +33,12 @@ function loadEnvFile(): Record<string, string> {
       if (!trimmed || trimmed.startsWith("#")) continue;
       const eqIdx = trimmed.indexOf("=");
       if (eqIdx === -1) continue;
-      vars[trimmed.slice(0, eqIdx).trim()] = trimmed.slice(eqIdx + 1).trim();
+      let value = trimmed.slice(eqIdx + 1).trim();
+      // Strip surrounding quotes (single or double)
+      if ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'"))) {
+        value = value.slice(1, -1);
+      }
+      vars[trimmed.slice(0, eqIdx).trim()] = value;
     }
     return vars;
   }
@@ -47,24 +52,70 @@ function env(key: string, fallback?: string): string | undefined {
   return cliArgs[key] ?? process.env[key] ?? fileEnv[key] ?? fallback;
 }
 
+// ─── Konsilio Config File ───
+
+interface KonsilioConfig {
+  personas?: {
+    enabled: string[];
+  };
+  models?: {
+    experts?: string;
+    lead?: string;
+    debate?: string;
+  };
+  timeouts?: {
+    expertMs?: number;
+    leadMs?: number;
+    debateMs?: number;
+  };
+  maxDraftPlanLength?: number;
+  maxHistorySessions?: number;
+  databasePath?: string;
+}
+
+function loadKonsilioConfig(): KonsilioConfig {
+  const candidates = [
+    resolve(process.cwd(), "konsilio.json"),
+    resolve(__dirname, "..", "konsilio.json"),
+  ];
+  
+  for (const configPath of candidates) {
+    if (!existsSync(configPath)) continue;
+    try {
+      const content = readFileSync(configPath, "utf-8");
+      return JSON.parse(content);
+    } catch {
+      // Invalid JSON, continue to next candidate
+    }
+  }
+  return {};
+}
+
+const konsilioConfig = loadKonsilioConfig();
+
+// ─── Exported Config ───
+
 export const config = {
   openrouterApiKey: env("OPENROUTER_API_KEY") ?? "",
   openrouterBaseUrl: "https://openrouter.ai/api/v1",
 
+  // Enabled persona IDs from config file (defaults to all if not specified)
+  enabledPersonas: konsilioConfig.personas?.enabled ?? ["security", "performance", "ux-dx", "devops"],
+
   models: {
-    experts: env("EXPERT_MODEL", "google/gemini-2.5-flash-lite"),
-    lead: env("LEAD_MODEL", "google/gemini-2.5-pro"),
-    debate: env("DEBATE_MODEL", "google/gemini-2.5-flash-lite"),
+    experts: env("EXPERT_MODEL") ?? konsilioConfig.models?.experts ?? "google/gemini-2.5-flash-lite",
+    lead: env("LEAD_MODEL") ?? konsilioConfig.models?.lead ?? "google/gemini-2.5-pro",
+    debate: env("DEBATE_MODEL") ?? konsilioConfig.models?.debate ?? "google/gemini-2.5-flash-lite",
   },
 
   timeouts: {
-    expertMs: 90_000,
-    leadMs: 120_000,
-    debateMs: 60_000,
+    expertMs: konsilioConfig.timeouts?.expertMs ?? 90_000,
+    leadMs: konsilioConfig.timeouts?.leadMs ?? 120_000,
+    debateMs: konsilioConfig.timeouts?.debateMs ?? 60_000,
   },
 
-  maxDraftPlanLength: parseInt(env("DRAFT_PLAN_MAX_LENGTH", "12000") ?? "12000", 10),
-  maxHistorySessions: parseInt(env("MAX_HISTORY_SESSIONS", "10") ?? "10", 10),
+  maxDraftPlanLength: konsilioConfig.maxDraftPlanLength ?? parseInt(env("DRAFT_PLAN_MAX_LENGTH", "12000") ?? "12000", 10),
+  maxHistorySessions: konsilioConfig.maxHistorySessions ?? parseInt(env("MAX_HISTORY_SESSIONS", "10") ?? "10", 10),
   maxParallelExperts: 4,
-  databasePath: env("DATABASE_PATH", "./data/council.db"),
+  databasePath: konsilioConfig.databasePath ?? env("DATABASE_PATH", "./data/council.db") ?? "./data/council.db",
 } as const;
