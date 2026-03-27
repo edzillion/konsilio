@@ -6,7 +6,7 @@ import {
   type Persona,
   type ExpertReport,
   type CouncilResult,
-} from "./personas/types.ts";
+} from "./personas/types.js";
 
 export interface CouncilParams {
   draftPlan: string;

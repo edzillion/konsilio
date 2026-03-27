@@ -1,4 +1,4 @@
-import { QUALITY_RULES } from "../constitution.ts";
+import { QUALITY_RULES } from "../constitution.js";
 import type { Persona } from "./types.js";
 
 export const performanceEngineer: Persona = {
