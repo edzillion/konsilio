@@ -1,5 +1,7 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
+import { callOpenRouter } from "./openrouter.js";
+import { config } from "./config.js";
 
 const server = new McpServer({
   name: "konsilio",
@@ -18,6 +20,20 @@ server.tool(
     }],
   })
 );
+
+server.tool("test_openrouter", "Test OpenRouter connection.", {}, async () => {
+  try {
+    const result = await callOpenRouter({
+      model: config.models.experts!,
+      messages: [{ role: "user", content: "Say 'hello' in one word." }],
+      maxTokens: 10,
+    });
+    return { content: [{ type: "text" as const, text: `✅ OpenRouter: ${result}` }] };
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : "Unknown error";
+    return { content: [{ type: "text" as const, text: `❌ ${msg}` }], isError: true };
+  }
+});
 
 async function main() {
   const transport = new StdioServerTransport();

@@ -1,0 +1,11 @@
+{
+  "servers": {
+    "council": {
+      "command": "node",
+      "args": ["build/index.js"],
+      "env": {
+        "OPENROUTER_API_KEY": "${env:OPENROUTER_API_KEY}"
+      }
+    }
+  }
+}
