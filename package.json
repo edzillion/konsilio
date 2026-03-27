@@ -7,7 +7,8 @@
     "build": "tsc",
     "dev": "tsc --watch",
     "start": "node build/index.js",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "history": "node build/cli/history.js"
   },
   "license": "MIT",
   "dependencies": {
