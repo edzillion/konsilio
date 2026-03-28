@@ -18,20 +18,19 @@ export const distributedSystemsEngineer: Persona = {
   name: "Distributed Systems Engineer",
   emoji: "🌐",
   focusAreas: [
-    "Consistency models",
-    "Fault tolerance",
-    "Message queues",
-    "Idempotency",
-    "Circuit breakers",
-    "Event sourcing",
-    "Distributed transactions",
-    "Service mesh"
+    "Consensus & quorum protocols",
+    "Failure detection & recovery",
+    "Message delivery semantics",
+    "Idempotency patterns",
+    "Resilience engineering (circuit breakers, bulkheads)",
+    "Event-driven architectures",
+    "Saga orchestration",
+    "Observability (tracing, metrics)"
   ],
   systemPrompt: buildPersonaPrompt({
     personaId: "distributed-systems",
     title: "Distributed Systems and Concurrency Engineer",
     reviewFocus: "distributed systems issues",
-    focusList: "consistency models (eventual, strong, causal), fault tolerance, message queues (at-least-once, exactly-once), idempotency, circuit breakers, event sourcing, distributed transactions (saga, 2PC), service mesh, race conditions, deadlocks",
     antiPatterns: DISTRIBUTED_SYSTEMS_ANTI_PATTERNS,
     criticalRules: {
       componentType: "service/flow/component",

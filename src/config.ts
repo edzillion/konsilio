@@ -139,7 +139,7 @@ export const config = {
   isDevelopment: parseNodeEnv(env("NODE_ENV")) === "development",
 
   // Enabled persona IDs from config file (defaults to all if not specified)
-  enabledPersonas: konsilioConfig.personas?.enabled ?? ["security", "performance", "ux-dx", "devops"],
+  enabledPersonas: konsilioConfig.personas?.enabled ?? ["securityArchitect", "performanceEngineer", "uxDxDesigner", "devopsEngineer"],
 
   // Model Configuration
   models: {

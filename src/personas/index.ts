@@ -15,6 +15,7 @@ import { graphDba } from './graph-dba.js';
 import { nodeFullstackEngineer } from './node-fullstack.js';
 import { devToolingSpecialist } from './dev-tooling.js';
 import { distributedSystemsEngineer } from './distributed-systems.js';
+import { testArchitect } from './test-architect.js';
 
 // Export individual personas
 export { uxDxDesigner } from './ux-dx.js';
@@ -26,6 +27,7 @@ export { graphDba } from './graph-dba.js';
 export { nodeFullstackEngineer } from './node-fullstack.js';
 export { devToolingSpecialist } from './dev-tooling.js';
 export { distributedSystemsEngineer } from './distributed-systems.js';
+export { testArchitect } from './test-architect.js';
 
 // Export types
 export * from './types.js';
@@ -46,6 +48,7 @@ export const expertPersonas: Persona[] = [
   nodeFullstackEngineer,
   devToolingSpecialist,
   distributedSystemsEngineer,
+  testArchitect,
 ];
 
 /**

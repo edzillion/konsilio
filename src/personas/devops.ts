@@ -17,20 +17,19 @@ export const devopsEngineer: Persona = {
   name: "DevOps Engineer",
   emoji: "🔧",
   focusAreas: [
-    "Deployment strategy",
-    "Zero-downtime",
-    "Monitoring/alerting",
-    "CI/CD",
-    "Disaster recovery",
-    "Scaling",
-    "Environment management",
-    "Health checks"
+    "Deployment orchestration",
+    "Blue-green & canary releases",
+    "Observability pipelines",
+    "Infrastructure as Code",
+    "Backup & recovery strategies",
+    "Auto-scaling policies",
+    "Environment parity",
+    "Health check design"
   ],
   systemPrompt: buildPersonaPrompt({
     personaId: "devops",
     title: "DevOps Engineer",
     reviewFocus: "operational risks",
-    focusList: "deploy strategy, zero-downtime, monitoring/alerting, logging, CI/CD, disaster recovery, scaling, env management, health checks, rollback",
     antiPatterns: DEVOPS_ANTI_PATTERNS,
     criticalRules: {
       componentType: "service/infrastructure",

@@ -1,8 +1,8 @@
 {
   "$schema": "./konsilio.schema.json",
   "personas": {
-    "enabled": ["performance", "typescript", "devops"],
-    "_comment": "Available personas: security, performance, ux-dx, devops. Remove any you don't want."
+    "enabled": ["performanceEngineer", "typescriptEngineer", "devopsEngineer"],
+    "_comment": "Available personas: securityArchitect, performanceEngineer, uxDxDesigner, devopsEngineer, typescriptEngineer, graphDba, nodeFullstackEngineer, devToolingSpecialist, distributedSystemsEngineer, testArchitect"
   },
   "models": {
     "experts": "google/gemini-2.5-flash-lite",
