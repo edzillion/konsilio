@@ -46,24 +46,26 @@ src/
 
 ## Critical Areas to Test First
 
-### 1. **CouncilService** (Core Business Logic)
+## IMPORTANT!!!! GET ONE TEST SUITE FILE WORKING PROPERLY BEFORE ATTEMPTING ANY OTHERS
+
+### 1. **Config Loading** (Foundation)
+- CLI arg parsing (`--api-key`)
+- Environment file loading (.env)
+- konsilio.json parsing
+- Validation logic
+
+### 2. **CouncilService** (Core Business Logic)
 - 4-phase pipeline orchestration
 - Expert parallel execution with `Promise.allSettled`
 - Failure handling (when experts fail)
 - Timeout handling
 - Structured output parsing
 
-### 2. **OpenRouterService** (External API Boundary)
+### 3. **OpenRouterService** (External API Boundary)
 - Retry logic with exponential backoff
 - Timeout handling
 - Error parsing (401, 402, 429, etc.)
 - Response parsing
-
-### 3. **Config Loading** (Foundation)
-- CLI arg parsing (`--api-key`)
-- Environment file loading (.env)
-- konsilio.json parsing
-- Validation logic
 
 ### 4. **DatabaseService** (Persistence)
 - SQLite operations
