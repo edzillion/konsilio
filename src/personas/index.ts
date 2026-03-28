@@ -11,6 +11,10 @@ import { devopsEngineer } from './devops.js';
 import { performanceEngineer } from './performance.js';
 import { securityArchitect } from './security.js';
 import { typescriptEngineer } from './typescript-engineer.js';
+import { graphDba } from './graph-dba.js';
+import { nodeFullstackEngineer } from './node-fullstack.js';
+import { devToolingSpecialist } from './dev-tooling.js';
+import { distributedSystemsEngineer } from './distributed-systems.js';
 
 // Export individual personas
 export { uxDxDesigner } from './ux-dx.js';
@@ -18,6 +22,10 @@ export { devopsEngineer } from './devops.js';
 export { performanceEngineer } from './performance.js';
 export { securityArchitect } from './security.js';
 export { typescriptEngineer } from './typescript-engineer.js';
+export { graphDba } from './graph-dba.js';
+export { nodeFullstackEngineer } from './node-fullstack.js';
+export { devToolingSpecialist } from './dev-tooling.js';
+export { distributedSystemsEngineer } from './distributed-systems.js';
 
 // Export types
 export * from './types.js';
@@ -34,6 +42,10 @@ export const expertPersonas: Persona[] = [
   uxDxDesigner,
   devopsEngineer,
   typescriptEngineer,
+  graphDba,
+  nodeFullstackEngineer,
+  devToolingSpecialist,
+  distributedSystemsEngineer,
 ];
 
 /**

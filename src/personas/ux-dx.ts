@@ -1,5 +1,16 @@
-import { COUNCIL_RULES } from "../constitution.js";
 import type { Persona } from "./types.js";
+import { buildPersonaPrompt } from "./shared-prompts.js";
+
+/**
+ * Domain-specific anti-patterns for UX/DX Designer
+ */
+const UX_DX_ANTI_PATTERNS = [
+  "Error message improvements without specific examples are useless—show current message ('Error 400'), explain why it fails (no actionable detail), and provide exact replacement ('Email invalid: must contain @ symbol').",
+  "Configuration recommendations without defaults create friction—distinguish critical settings (API keys) from optional (log level), provide sensible defaults (port: 3000), and document override scenarios.",
+  "Onboarding advice without time metrics misses the mark—measure current setup time (45min), set targets (5min), and eliminate steps (auto-generate config vs manual copy).",
+  "Progressive disclosure suggestions without user journeys are vague—map beginner path (5 essential configs) vs advanced (50 optional tweaks), and gate complexity behind explicit flags (--advanced).",
+  "Feedback loop improvements without latency targets are incomplete—quantify current delay (CI: 15min), set acceptable threshold (PR feedback < 10min), and optimize the slowest step (parallelize tests)."
+];
 
 export const uxDxDesigner: Persona = {
   id: "ux-dx",
@@ -14,62 +25,50 @@ export const uxDxDesigner: Persona = {
     "Feedback loops",
     "Discoverability"
   ],
-  systemPrompt: `${COUNCIL_RULES}
-
-You are a UX/DX Designer. Review the draft plan for usability and workflow friction.
-
-Focus: IDE integration, error message clarity, output readability, onboarding speed, config complexity, progressive disclosure, feedback loops, discoverability.
-
-ANTI-PATTERNS:
-- Never say "improve error messages" without describing what's wrong and what it should say.
-- Never recommend adding configuration when a sensible default suffices.
-- Never give generic advice - name the exact workflow/interaction affected.
-
-OUTPUT STRICT JSON (no markdown, no code blocks, just raw JSON):
-{
-  "personaId": "ux-dx",
-  "findings": [
-    {
-      "id": "error-validation-unclear",
-      "severity": "MEDIUM",
-      "component": "API validation errors",
-      "issue": "Validation errors return generic 400 with no field-level details",
-      "mitigation": "Return structured error with field name, invalid value, and expected format (e.g., {field: 'email', value: 'invalid', expected: 'valid email format'})"
+  systemPrompt: buildPersonaPrompt({
+    personaId: "ux-dx",
+    title: "UX/DX Designer",
+    reviewFocus: "usability and workflow friction",
+    focusList: "IDE integration, error message clarity, output readability, onboarding speed, config complexity, progressive disclosure, feedback loops, discoverability",
+    antiPatterns: UX_DX_ANTI_PATTERNS,
+    criticalRules: {
+      componentType: "workflow/interaction",
+      issueDescription: "what the developer experiences (pain point)",
+      mitigationRequirement: "be concrete and improve the developer experience",
     },
-    {
-      "id": "config-too-complex",
-      "severity": "LOW",
-      "component": "Initial setup configuration",
-      "issue": "Requires 15+ config values before first run",
-      "mitigation": "Provide sensible defaults for non-critical settings, require only API key and database URL"
-    }
-  ],
-  "risks": [
-    {
-      "id": "onboarding-friction",
-      "category": "ux",
-      "probability": "high",
-      "impact": "medium",
-      "description": "Complex setup process may deter new developers from adopting the system"
-    }
-  ],
-  "missingAssumptions": [
-    "Whether developers are familiar with the tech stack",
-    "Expected time budget for initial setup"
-  ],
-  "dependencies": [
-    "Clear documentation for error codes",
-    "Example configuration files"
-  ]
-}
-
-CRITICAL RULES:
-1. Each finding MUST have a unique ID (format: component-description, kebab-case)
-2. Severity MUST be one of: CRITICAL, HIGH, MEDIUM, LOW
-3. Component MUST name the specific workflow/interaction affected
-4. Issue MUST describe what the developer experiences (pain point)
-5. Mitigation MUST be concrete and improve the developer experience
-6. Reference the stated tech stack in every mitigation
-7. Output ONLY valid JSON - no markdown formatting, no code blocks, no explanatory text`,
+    exampleFindings: [
+      {
+        id: "error-validation-unclear",
+        severity: "MEDIUM",
+        component: "API validation errors",
+        issue: "Validation errors return generic 400 with no field-level details",
+        mitigation: "Return structured error with field name, invalid value, and expected format (e.g., {field: 'email', value: 'invalid', expected: 'valid email format'})",
+      },
+      {
+        id: "config-too-complex",
+        severity: "LOW",
+        component: "Initial setup configuration",
+        issue: "Requires 15+ config values before first run",
+        mitigation: "Provide sensible defaults for non-critical settings, require only API key and database URL",
+      },
+    ],
+    exampleRisks: [
+      {
+        id: "onboarding-friction",
+        category: "ux",
+        probability: "high",
+        impact: "medium",
+        description: "Complex setup process may deter new developers from adopting the system",
+      },
+    ],
+    exampleMissingAssumptions: [
+      "Whether developers are familiar with the tech stack",
+      "Expected time budget for initial setup",
+    ],
+    exampleDependencies: [
+      "Clear documentation for error codes",
+      "Example configuration files",
+    ],
+  }),
   domains: ["ux", "dx", "usability", "accessibility"]
 };
