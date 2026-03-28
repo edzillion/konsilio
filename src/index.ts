@@ -4,9 +4,8 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
 import { config } from "./config.js";
-import { runCouncil } from "./council.js";
+import { getServices } from "./container.js";
 import { allPersonas } from "./personas/index.js";
-import * as db from "./db/index.js";
 
 const server = new McpServer({
   name: "konsilio",
@@ -66,7 +65,8 @@ who analyze in parallel, then a Lead Architect synthesizes their findings.`,
     }
 
     try {
-      const result = await runCouncil(
+      const services = getServices();
+      const result = await services.councilService.run(
         {
           draftPlan,
           techStack: params.tech_stack,
@@ -74,13 +74,6 @@ who analyze in parallel, then a Lead Architect synthesizes their findings.`,
         },
         { debateMode: params.debate_mode }
       );
-
-      // Save to database (non-blocking, failures are silent)
-      try {
-        db.saveCouncilResult(result, draftPlan, params.tech_stack, params.context_constraints);
-      } catch {
-        // Persistence failure is non-fatal
-      }
 
       return {
         content: [{ type: "text" as const, text: result.finalBlueprint }],
@@ -104,7 +97,8 @@ server.tool(
     limit: z.number().min(1).max(50).default(10).describe("Number of sessions to retrieve"),
   },
   async (params) => {
-    const sessions = db.getRecentSessions(params.limit);
+    const services = getServices();
+    const sessions = services.databaseService.getRecentSessions(params.limit);
     if (sessions.length === 0) {
       return { content: [{ type: "text" as const, text: "No previous sessions found." }] };
     }
