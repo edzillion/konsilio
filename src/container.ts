@@ -64,8 +64,9 @@ export function createServices(): AppServices {
   });
 
   // Create Council service with all dependencies
+  // Note: validateConfig() ensures enabledPersonas is defined
   const councilConfig: CouncilConfig = {
-    enabledPersonaIds: config.enabledPersonas,
+    enabledPersonaIds: config.enabledPersonas!,
     models: config.models,
     timeouts: config.timeouts,
     maxDraftPlanLength: config.maxDraftPlanLength,

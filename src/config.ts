@@ -137,7 +137,7 @@ export const config = {
   isDevelopment: parseNodeEnv(env("NODE_ENV")) === "development",
 
   // Enabled persona IDs from config file (defaults to all if not specified)
-  enabledPersonas: konsilioConfig.personas?.enabled ?? ["securityArchitect", "performanceEngineer", "uxDxDesigner", "devopsEngineer"],
+  enabledPersonas: konsilioConfig.personas?.enabled,
 
   // Model Configuration
   models: {
@@ -165,13 +165,21 @@ export const config = {
 
 /**
  * Validates that required configuration is present.
- * Throws an error if OPENROUTER_API_KEY is not set.
+ * Throws an error if required config is missing.
  */
 export function validateConfig(): void {
   if (!config.openrouterApiKey) {
     throw new Error(
       "Missing OPENROUTER_API_KEY. Set it in your .env file or via OPENROUTER_API_KEY environment variable.\n" +
       "Get your key at https://openrouter.ai/keys"
+    );
+  }
+
+  if (!config.enabledPersonas || config.enabledPersonas.length === 0) {
+    throw new Error(
+      "Missing enabled personas in konsilio.json. " +
+      "Add a 'personas.enabled' array with valid persona IDs. " +
+      "Available: security, performance, ux-dx, devops, typescript, graph-dba, node-fullstack, dev-tooling, distributed-systems, test-architect"
     );
   }
 }
