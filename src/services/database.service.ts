@@ -21,7 +21,6 @@ export interface SessionSummary {
   created_at: string;
   draft_plan_summary: string | null;
   tech_stack: string | null;
-  debate_mode: number;
 }
 
 /**
@@ -95,41 +94,96 @@ export class DatabaseService {
 
     try {
       const tx = this.db.transaction(() => {
+        // Save session
         this.db!.prepare(`
-          INSERT INTO sessions (id, draft_plan_summary, tech_stack, constraints, debate_mode)
-          VALUES (?, ?, ?, ?, ?)
+          INSERT INTO sessions (id, draft_plan_summary, tech_stack, constraints)
+          VALUES (?, ?, ?, ?)
         `).run(
           result.sessionId,
           draftPlan.slice(0, 500),
           techStack ?? null,
-          constraints ?? null,
-          result.debateReports ? 1 : 0,
+          constraints ?? null
         );
 
+        // Save user message
         this.db!.prepare(`
           INSERT INTO messages (session_id, role, content)
           VALUES (?, 'user', ?)
         `).run(result.sessionId, draftPlan);
 
-        for (const r of result.expertReports) {
-          this.db!.prepare(`
-            INSERT INTO expert_reports (session_id, persona_id, persona_name, persona_emoji, content, duration_ms, model_used, is_debate)
-            VALUES (?, ?, ?, ?, ?, ?, ?, 0)
-          `).run(result.sessionId, r.personaId, r.personaName, r.personaEmoji, r.content, r.durationMs, r.modelUsed);
-        }
+        // Save expert findings
+        for (const report of result.expertReports) {
+          for (const finding of report.structuredOutput.findings) {
+            const decision = result.decisionOutput.decisions.find(d => d.findingId === finding.id);
+            const accepted = decision?.action === 'ACCEPT' ? 1 : 0;
+            const rejectionReason = decision?.action === 'REJECT' ? decision.reasoning : null;
 
-        if (result.debateReports) {
-          for (const r of result.debateReports) {
             this.db!.prepare(`
-              INSERT INTO expert_reports (session_id, persona_id, persona_name, persona_emoji, content, duration_ms, model_used, is_debate)
-              VALUES (?, ?, ?, ?, ?, ?, ?, 1)
-            `).run(result.sessionId, r.personaId, r.personaName, r.personaEmoji, r.content, r.durationMs, r.modelUsed);
+              INSERT INTO expert_findings (
+                id, session_id, persona_id, persona_name, persona_emoji,
+                severity, component, issue, mitigation, accepted, rejection_reason,
+                duration_ms, model_used
+              ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            `).run(
+              finding.id,
+              result.sessionId,
+              report.personaId,
+              report.personaName,
+              report.personaEmoji,
+              finding.severity,
+              finding.component,
+              finding.issue,
+              finding.mitigation,
+              accepted,
+              rejectionReason,
+              report.durationMs,
+              report.modelUsed
+            );
+          }
+
+          // Save expert risks
+          for (const risk of report.structuredOutput.risks) {
+            this.db!.prepare(`
+              INSERT INTO expert_risks (
+                id, session_id, persona_id, category, probability, impact, description
+              ) VALUES (?, ?, ?, ?, ?, ?, ?)
+            `).run(
+              risk.id,
+              result.sessionId,
+              report.personaId,
+              risk.category,
+              risk.probability,
+              risk.impact,
+              risk.description
+            );
           }
         }
 
+        // Save consolidation phase outputs
+        this.db!.prepare(`
+          INSERT INTO consolidation_phases (session_id, phase_name, phase_output)
+          VALUES (?, 'extraction', ?)
+        `).run(result.sessionId, JSON.stringify(result.extractionOutput));
+
+        this.db!.prepare(`
+          INSERT INTO consolidation_phases (session_id, phase_name, phase_output)
+          VALUES (?, 'critique', ?)
+        `).run(result.sessionId, JSON.stringify(result.critiqueOutput));
+
+        this.db!.prepare(`
+          INSERT INTO consolidation_phases (session_id, phase_name, phase_output)
+          VALUES (?, 'decision', ?)
+        `).run(result.sessionId, JSON.stringify(result.decisionOutput));
+
+        this.db!.prepare(`
+          INSERT INTO consolidation_phases (session_id, phase_name, phase_output)
+          VALUES (?, 'synthesis', ?)
+        `).run(result.sessionId, JSON.stringify(result.synthesisOutput));
+
+        // Save final blueprint as assistant message
         this.db!.prepare(`
           INSERT INTO messages (session_id, role, persona_id, content)
-          VALUES (?, 'assistant', 'lead', ?)
+          VALUES (?, 'assistant', 'consolidation', ?)
         `).run(result.sessionId, result.finalBlueprint);
       });
 
@@ -150,7 +204,7 @@ export class DatabaseService {
   getRecentSessions(limit: number = 10): SessionSummary[] {
     if (!this.db) return [];
     return this.db.prepare(`
-      SELECT id, created_at, draft_plan_summary, tech_stack, debate_mode
+      SELECT id, created_at, draft_plan_summary, tech_stack
       FROM sessions ORDER BY created_at DESC LIMIT ?
     `).all(limit) as SessionSummary[];
   }
@@ -162,7 +216,7 @@ export class DatabaseService {
     if (!this.db) return null;
     const row = this.db.prepare(`
       SELECT content FROM messages
-      WHERE session_id = ? AND role = 'assistant' AND persona_id = 'lead'
+      WHERE session_id = ? AND role = 'assistant' AND persona_id = 'consolidation'
       ORDER BY created_at DESC LIMIT 1
     `).get(sessionId) as { content: string } | undefined;
     return row?.content ?? null;

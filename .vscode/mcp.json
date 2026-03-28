@@ -1,0 +1,8 @@
+{
+  "servers": {
+    "konsilio": {
+      "command": "node",
+      "args": ["build/index.js"],
+    }
+  }
+}

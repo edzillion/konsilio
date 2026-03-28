@@ -8,7 +8,7 @@
 import { logger } from './logger.js';
 import { config, validateConfig } from './config.js';
 import { SCHEMA } from './db/schema.js';
-import { expertPersonas, leadArchitect } from './personas/index.js';
+import { expertPersonas } from './personas/index.js';
 import { OpenRouterService } from './services/openrouter.service.js';
 import { DatabaseService } from './services/database.service.js';
 import { CacheService } from './services/cache.service.js';
@@ -64,7 +64,6 @@ export function createServices(): AppServices {
     databaseService,
     cacheService,
     expertPersonas,
-    leadPersona: leadArchitect,
     config: councilConfig,
   });
 
