@@ -1,8 +1,8 @@
 {
   "$schema": "./konsilio.schema.json",
   "personas": {
-    "enabled": ["graphDba", "nodeFullstackEngineer", "devopsEngineer", "devToolingSpecialist", "distributedSystemsEngineer", "testArchitect"],
-    "_comment": "Available personas: securityArchitect, performanceEngineer, uxDxDesigner, devopsEngineer, typescriptEngineer, graphDba, nodeFullstackEngineer, devToolingSpecialist, distributedSystemsEngineer, testArchitect"
+    "enabled": ["graph-dba", "node-fullstack", "devops", "dev-tooling", "distributed-systems", "test-architect"],
+    "_comment": "Available personas: security, performance, ux-dx, devops, typescript, graph-dba, node-fullstack, dev-tooling, distributed-systems, test-architect"
   },
   "constitution": "./constitution.txt",
   "models": {
