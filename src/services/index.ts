@@ -15,3 +15,6 @@ export type { CouncilConfig, CouncilParams, CouncilOptions } from './council.ser
 
 export { CacheService } from './cache.service.js';
 export type { CacheEntry } from './cache.service.js';
+
+export { PromptService } from './prompt.service.js';
+export type { PromptServiceConfig, PersonaPromptData } from './prompt.service.js';

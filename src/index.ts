@@ -25,11 +25,16 @@ Returns a structured blueprint with:
 - Architecture Directives (specific decisions)
 - Edge Cases & Failure Modes
 - Required Constraints
-- Recommended Patterns
 - Next Steps for Agent (numbered, executable actions)
 
-The council consists of 4 expert personas (Security, Performance, UX/DX, DevOps)
-who analyze in parallel, then a Lead Architect synthesizes their findings.`,
+The council uses a 4-phase consolidation pipeline:
+1. Expert Analysis (parallel, structured JSON output from enabled personas)
+2. Extraction (extract claims from expert reports)
+3. Critique (identify contradictions and weaknesses)
+4. Decision (accept/reject findings)
+5. Synthesis (assemble final blueprint)
+
+Use 'list_personas' to see all available personas. Enable personas in konsilio.json.`,
   {
     draft_plan: z.string().describe(
       "The architecture plan or design to analyze."

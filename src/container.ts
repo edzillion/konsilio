@@ -12,12 +12,14 @@ import { expertPersonas } from './personas/index.js';
 import { OpenRouterService } from './services/openrouter.service.js';
 import { DatabaseService } from './services/database.service.js';
 import { CacheService } from './services/cache.service.js';
+import { PromptService } from './services/prompt.service.js';
 import { CouncilService, type CouncilConfig } from './services/council.service.js';
 
 export interface AppServices {
   openRouterService: OpenRouterService;
   databaseService: DatabaseService;
   cacheService: CacheService;
+  promptService: PromptService;
   councilService: CouncilService;
 }
 
@@ -50,6 +52,9 @@ export function createServices(): AppServices {
   // Create Cache service
   const cacheService = new CacheService(config.cacheTtlSeconds * 1000);
 
+  // Create Prompt service
+  const promptService = new PromptService(undefined, logger);
+
   // Create Council service with all dependencies
   const councilConfig: CouncilConfig = {
     enabledPersonaIds: config.enabledPersonas,
@@ -71,6 +76,7 @@ export function createServices(): AppServices {
     openRouterService,
     databaseService,
     cacheService,
+    promptService,
     councilService,
   };
 }

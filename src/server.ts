@@ -106,7 +106,7 @@ async function handleAnalyze(
 ): Promise<void> {
   const body = await readBody(req);
 
-  let parsed: { draft_plan?: string; tech_stack?: string; context_constraints?: string; debate_mode?: boolean };
+  let parsed: { draft_plan?: string; tech_stack?: string; context_constraints?: string };
   try {
     parsed = JSON.parse(body);
   } catch {

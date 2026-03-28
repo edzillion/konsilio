@@ -5,7 +5,43 @@
  * These strings are refined over time and should be consistent.
  */
 
-import { COUNCIL_RULES } from "../constitution.js";
+import { loadConstitution } from "../constitution.js";
+
+// ─── Core Rules (Non-negotiable, every run) ───
+
+/**
+ * Builds the CORE RULES section - non-negotiable rules for every council run.
+ * These are merged with persona-specific critical rules configuration.
+ */
+export interface CoreRulesConfig {
+  /** What type of component to name (e.g., "endpoint/flow/module") */
+  componentType: string;
+  /** What the issue must describe (e.g., "specific security risk") */
+  issueDescription: string;
+  /** What the mitigation must include (e.g., "be concrete and executable") */
+  mitigationRequirement: string;
+}
+
+/**
+ * Builds the complete CORE RULES section with customizable parts.
+ * These rules are non-negotiable and apply to all expert analysis.
+ */
+export function buildCoreRules(config: CoreRulesConfig): string {
+  return `CORE RULES (NON-NEGOTIABLE):
+1. NEVER read, reference, or modify actual source code — analyze ONLY the plan text provided
+2. Focus on ARCHITECTURE, not implementation — explain WHAT and WHY, minimize code snippets
+3. Be SPECIFIC and OPINIONATED — vague advice like "consider security" or "use caching" is worthless
+4. ALWAYS reference the stated tech stack by name — generic recommendations are forbidden
+5. Respect context constraints strictly — never recommend incompatible solutions
+6. Stay within your assigned role — analyze from your persona's expertise only
+7. Each finding MUST have a unique ID (format: component-description, kebab-case)
+8. Severity MUST be one of: CRITICAL, HIGH, MEDIUM, LOW
+9. Component MUST name the specific ${config.componentType} affected
+10. Issue MUST describe the ${config.issueDescription}
+11. Mitigation MUST ${config.mitigationRequirement}
+12. Reference the stated tech stack in every mitigation
+13. Output ONLY valid JSON — no markdown formatting, no code blocks, no explanatory text`;
+}
 
 // ─── Generic Anti-Patterns ───
 
@@ -15,44 +51,6 @@ import { COUNCIL_RULES } from "../constitution.js";
  */
 export const GENERIC_ANTI_PATTERN = "Never give generic advice - name the exact {componentType} affected.";
 
-// ─── Output Format ───
-
-/**
- * JSON output instruction and Rule 7 - identical across all personas.
- * Used both as the output directive before the JSON template and as rule 7.
- */
-export const OUTPUT_ONLY_JSON_RULE = "Output ONLY valid JSON - no markdown formatting, no code blocks, no explanatory text";
-
-// ─── Critical Rules Builder ───
-
-/**
- * Critical rules that are identical across all personas except for:
- * - Rule 3: component type (endpoint/flow/module, service/infrastructure, etc.)
- * - Rule 4: domain description (security risk, performance bottleneck, etc.)
- * - Rule 5: mitigation requirement (varies by domain)
- */
-export interface CriticalRulesConfig {
-  /** What type of component to name in rule 3 (e.g., "endpoint/flow/module") */
-  componentType: string;
-  /** What the issue must describe in rule 4 (e.g., "specific security risk") */
-  issueDescription: string;
-  /** What the mitigation must include in rule 5 (e.g., "be concrete and executable (not 'consider' or 'should')") */
-  mitigationRequirement: string;
-}
-
-/**
- * Builds the CRITICAL RULES section with customizable parts.
- */
-export function buildCriticalRules(config: CriticalRulesConfig): string {
-  return `CRITICAL RULES:
-1. Each finding MUST have a unique ID (format: component-description, kebab-case)
-2. Severity MUST be one of: CRITICAL, HIGH, MEDIUM, LOW
-3. Component MUST name the specific ${config.componentType} affected
-4. Issue MUST describe the ${config.issueDescription}
-5. Mitigation MUST ${config.mitigationRequirement}
-6. Reference the stated tech stack in every mitigation
-7. ${OUTPUT_ONLY_JSON_RULE}`;
-}
 
 // ─── Full Prompt Builder ───
 
@@ -65,8 +63,8 @@ export interface PersonaPromptConfig {
   reviewFocus: string;
   /** Domain-specific anti-patterns */
   antiPatterns: string[];
-  /** Critical rules configuration */
-  criticalRules: CriticalRulesConfig;
+  /** Core rules configuration */
+  coreRules: CoreRulesConfig;
   /** Example findings for the JSON template (2 examples) */
   exampleFindings: Array<{
     id: string;
@@ -125,15 +123,17 @@ export function buildPersonaPrompt(config: PersonaPromptConfig): string {
     .map(d => `    "${d}"`)
     .join(',\n');
 
-  return `${COUNCIL_RULES}
+  const constitution = loadConstitution();
+  
+  return `${buildCoreRules(config.coreRules)}
+${constitution ? `\n\n${constitution}` : ''}
 
 You are a ${config.title}. Review the draft plan for ${config.reviewFocus}.
 
 ANTI-PATTERNS:
 ${antiPatternsSection}
-${GENERIC_ANTI_PATTERN.replace('{componentType}', config.criticalRules.componentType)}
+${GENERIC_ANTI_PATTERN.replace('{componentType}', config.coreRules.componentType)}
 
-${OUTPUT_ONLY_JSON_RULE}
 {
   "personaId": "${config.personaId}",
   "findings": [
@@ -148,7 +148,5 @@ ${assumptionsJson}
   "dependencies": [
 ${dependenciesJson}
   ]
-}
-
-${buildCriticalRules(config.criticalRules)}`;
+}`;
 }

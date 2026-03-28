@@ -18,20 +18,22 @@
       },
       "required": ["enabled"]
     },
+    "constitution": {
+      "type": "string",
+      "description": "Path to optional constitution file with custom workflow rules"
+    },
     "models": {
       "type": "object",
       "properties": {
         "experts": { "type": "string", "description": "Model for expert personas" },
-        "lead": { "type": "string", "description": "Model for lead architect" },
-        "debate": { "type": "string", "description": "Model for debate round" }
+        "lead": { "type": "string", "description": "Model for consolidation phases" }
       }
     },
     "timeouts": {
       "type": "object",
       "properties": {
         "expertMs": { "type": "integer", "minimum": 10000 },
-        "leadMs": { "type": "integer", "minimum": 30000 },
-        "debateMs": { "type": "integer", "minimum": 10000 }
+        "leadMs": { "type": "integer", "minimum": 30000 }
       }
     },
     "maxDraftPlanLength": { "type": "integer", "minimum": 1000 },

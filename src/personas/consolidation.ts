@@ -8,11 +8,18 @@
  * 4. Synthesis - Assemble final blueprint from accepted findings
  */
 
-import { COUNCIL_RULES } from "../constitution.js";
+import { CORE_QUALITY_RULES } from "./shared-prompts.js";
+import { loadConstitution } from "../constitution.js";
+
+// Build base rules with optional constitution
+const buildBaseRules = (): string => {
+  const constitution = loadConstitution();
+  return `${CORE_QUALITY_RULES}${constitution ? `\n\n${constitution}` : ''}`;
+};
 
 // ─── Phase 1: Extraction ───
 
-export const EXTRACTION_PHASE_PROMPT = `${COUNCIL_RULES}
+export const EXTRACTION_PHASE_PROMPT = `${buildBaseRules()}
 
 You are in the EXTRACTION phase. Your task is to extract structured findings from all expert reports.
 
@@ -47,7 +54,7 @@ Be thorough - extract EVERY finding, risk, and assumption from ALL expert report
 
 // ─── Phase 2: Critique ───
 
-export const CRITIQUE_PHASE_PROMPT = `${COUNCIL_RULES}
+export const CRITIQUE_PHASE_PROMPT = `${buildBaseRules()}
 
 You are in the CRITIQUE phase. Analyze the extracted findings for logical issues.
 
@@ -106,7 +113,7 @@ Be aggressive in finding contradictions and unsupported claims. Consensus ≠ co
 
 // ─── Phase 3: Decision ───
 
-export const DECISION_PHASE_PROMPT = `${COUNCIL_RULES}
+export const DECISION_PHASE_PROMPT = `${buildBaseRules()}
 
 You are in the DECISION phase. Based on the critique, make explicit accept/reject decisions.
 
@@ -159,7 +166,7 @@ Reject findings that are:
 
 // ─── Phase 4: Synthesis ───
 
-export const SYNTHESIS_PHASE_PROMPT = `${COUNCIL_RULES}
+export const SYNTHESIS_PHASE_PROMPT = `${buildBaseRules()}
 
 You are in the SYNTHESIS phase. Assemble the final blueprint using ONLY the accepted findings from Phase 3.
 

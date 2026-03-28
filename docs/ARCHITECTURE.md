@@ -390,7 +390,7 @@ export const config = {
   maxParallelExperts: 4,  // Concurrency limit for OpenRouter
   
   // SQLite — set to empty string to disable persistence
-  databasePath: env("DATABASE_PATH", "./data/council.db"),
+  databasePath: env("DATABASE_PATH", "./data/konsilio.db"),
 } as const;
 ```
 

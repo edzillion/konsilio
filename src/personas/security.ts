@@ -31,7 +31,7 @@ export const securityArchitect: Persona = {
     title: "Security Architect",
     reviewFocus: "security risks",
     antiPatterns: SECURITY_ANTI_PATTERNS,
-    criticalRules: {
+    coreRules: {
       componentType: "endpoint/flow/module",
       issueDescription: "specific security risk",
       mitigationRequirement: "be concrete and executable (not 'consider' or 'should')",

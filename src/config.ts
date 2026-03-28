@@ -90,12 +90,10 @@ interface KonsilioConfig {
   models?: {
     experts?: string;
     lead?: string;
-    debate?: string;
   };
   timeouts?: {
     expertMs?: number;
     leadMs?: number;
-    debateMs?: number;
   };
   maxDraftPlanLength?: number;
   maxHistorySessions?: number;
@@ -145,14 +143,12 @@ export const config = {
   models: {
     experts: env("EXPERT_MODEL") ?? konsilioConfig.models?.experts ?? "google/gemini-2.5-flash-lite",
     lead: env("LEAD_MODEL") ?? konsilioConfig.models?.lead ?? "google/gemini-2.5-pro",
-    debate: env("DEBATE_MODEL") ?? konsilioConfig.models?.debate ?? "google/gemini-2.5-flash-lite",
   },
 
   // Timeout Configuration
   timeouts: {
     expertMs: konsilioConfig.timeouts?.expertMs ?? 90_000,
     leadMs: konsilioConfig.timeouts?.leadMs ?? 120_000,
-    debateMs: konsilioConfig.timeouts?.debateMs ?? 60_000,
   },
 
   // Limits
@@ -161,7 +157,7 @@ export const config = {
   maxParallelExperts: 4,
 
   // Database & Caching
-  databasePath: konsilioConfig.databasePath ?? env("DATABASE_PATH", "./data/council.db") ?? "./data/council.db",
+  databasePath: konsilioConfig.databasePath ?? env("DATABASE_PATH", "./data/konsilio.db") ?? "./data/konsilio.db",
   cacheTtlSeconds: parsePositiveInt(env("CACHE_TTL_SECONDS"), 3600),
 } as const;
 

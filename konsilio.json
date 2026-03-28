@@ -1,20 +1,19 @@
 {
   "$schema": "./konsilio.schema.json",
   "personas": {
-    "enabled": ["performanceEngineer", "typescriptEngineer", "devopsEngineer"],
+    "enabled": ["graphDba", "nodeFullstackEngineer", "devopsEngineer", "devToolingSpecialist", "distributedSystemsEngineer", "testArchitect"],
     "_comment": "Available personas: securityArchitect, performanceEngineer, uxDxDesigner, devopsEngineer, typescriptEngineer, graphDba, nodeFullstackEngineer, devToolingSpecialist, distributedSystemsEngineer, testArchitect"
   },
+  "constitution": "./constitution.txt",
   "models": {
     "experts": "google/gemini-2.5-flash-lite",
-    "lead": "google/gemini-2.5-pro",
-    "debate": "google/gemini-2.5-flash-lite"
+    "lead": "google/gemini-2.5-pro"
   },
   "timeouts": {
     "expertMs": 90000,
-    "leadMs": 120000,
-    "debateMs": 60000
+    "leadMs": 120000
   },
   "maxDraftPlanLength": 12000,
   "maxHistorySessions": 10,
-  "databasePath": "./data/council.db"
+  "databasePath": "./data/konsilio.db"
 }

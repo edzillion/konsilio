@@ -37,12 +37,10 @@ export interface CouncilConfig {
   models: {
     experts: string;
     lead: string;
-    debate: string;
   };
   timeouts: {
     expertMs: number;
     leadMs: number;
-    debateMs: number;
   };
   maxDraftPlanLength: number;
 }
