@@ -42,11 +42,14 @@ src/
 * ALWAYS check the implementation of the class to be tested and review the code to ensure the test is appropriate. Take note of the parameter types and design tests with typed asserts that use them. Use types and typed arrays consistently
 * ALSO check the related resource and config files and use the values present in those json files as the 'expected' values in tests
 * Use test helpers/utils wherever possible, add new helpers where code duplication can be reduced.
-
+* when testing use `npm test-agent` which is designed to make test output easier for agents to understand. 
 
 ## Critical Areas to Test First
 
-## IMPORTANT!!!! GET ONE TEST SUITE FILE WORKING PROPERLY BEFORE ATTEMPTING ANY OTHERS
+## Important!! 
+## This is a complex setup so we will go in small steps. Get ONE test file with ONE test, but including the full testing, di, mocking etc paradigm that we need 
+## Then complete the tests for that ONE file before attempting any others
+## When these tests pass you can continue
 
 ### 1. **Config Loading** (Foundation)
 - CLI arg parsing (`--api-key`)
