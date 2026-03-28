@@ -18,3 +18,5 @@ export type { CacheEntry } from './cache.service.js';
 
 export { PromptService } from './prompt.service.js';
 export type { PromptServiceConfig, PersonaPromptData } from './prompt.service.js';
+
+export { PersonaService } from './persona.service.js';

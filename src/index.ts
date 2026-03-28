@@ -5,7 +5,6 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import { z } from "zod";
 import { config } from "./config.js";
 import { getServices } from "./container.js";
-import { allPersonas } from "./personas/index.js";
 
 const server = new McpServer({
   name: "konsilio",
@@ -122,6 +121,9 @@ server.tool(
   "List all expert personas in the council.",
   {},
   async () => {
+    const services = getServices();
+    const personaIds = services.personaService.getAvailablePersonaIds();
+    const allPersonas = services.personaService.createExperts(personaIds, 'default');
     let output = "# Council Personas\n\n";
     for (const p of allPersonas) {
       output += `## ${p.emoji} ${p.name}\n`;

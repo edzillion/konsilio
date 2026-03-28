@@ -25,12 +25,8 @@ import type {
 import type { OpenRouterService, Message } from './openrouter.service.js';
 import type { DatabaseService } from './database.service.js';
 import type { CacheService } from './cache.service.js';
-import { 
-  EXTRACTION_PHASE_PROMPT,
-  CRITIQUE_PHASE_PROMPT,
-  DECISION_PHASE_PROMPT,
-  SYNTHESIS_PHASE_PROMPT
-} from '../personas/consolidation.js';
+import type { PromptService } from './prompt.service.js';
+import type { PersonaService } from './persona.service.js';
 
 export interface CouncilConfig {
   enabledPersonaIds: string[];
@@ -68,7 +64,8 @@ export class CouncilService {
       openRouterService: OpenRouterService;
       databaseService: DatabaseService;
       cacheService: CacheService;
-      expertPersonas: Persona[];
+      promptService: PromptService;
+      personaService: PersonaService;
       config: CouncilConfig;
     },
   ) {}
@@ -90,7 +87,12 @@ export class CouncilService {
 
     const expertModel = options?.modelOverride?.experts ?? this.deps.config.models.experts;
     const consolidationModel = options?.modelOverride?.consolidation ?? this.deps.config.models.lead;
-    const personas = this.deps.expertPersonas.filter((p) => this.deps.config.enabledPersonaIds.includes(p.id));
+
+    // Create experts dynamically from markdown files
+    const personas = this.deps.personaService.createExperts(
+      this.deps.config.enabledPersonaIds,
+      expertModel
+    );
 
     if (personas.length < 2) throw new Error(`At least 2 personas required. Found: ${this.deps.config.enabledPersonaIds.join(', ')}`);
 
@@ -212,12 +214,14 @@ export class CouncilService {
    * Phase 2: Extraction - Extract structured claims from expert reports
    */
   private async runExtractionPhase(reports: ExpertReport[], model: string, log: Logger | CorrelatedLogger): Promise<ExtractionPhaseOutput> {
+    const lead = this.deps.personaService.createLead('extraction');
+    
     const expertReportsText = reports.map(r => 
       `## ${r.personaEmoji} ${r.personaName}\n\n${JSON.stringify(r.structuredOutput, null, 2)}`
     ).join('\n\n---\n\n');
 
     const messages: Message[] = [
-      { role: 'system', content: EXTRACTION_PHASE_PROMPT },
+      { role: 'system', content: lead.systemPrompt },
       { role: 'user', content: `Extract all findings from these expert reports:\n\n${expertReportsText}` }
     ];
 
@@ -244,10 +248,12 @@ export class CouncilService {
     model: string, 
     log: Logger | CorrelatedLogger
   ): Promise<CritiquePhaseOutput> {
+    const lead = this.deps.personaService.createLead('critique');
+    
     const context = `## Original Draft Plan\n\n${params.draftPlan}\n\n## Extracted Claims\n\n${JSON.stringify(extraction, null, 2)}`;
 
     const messages: Message[] = [
-      { role: 'system', content: CRITIQUE_PHASE_PROMPT },
+      { role: 'system', content: lead.systemPrompt },
       { role: 'user', content: context }
     ];
 
@@ -276,11 +282,13 @@ export class CouncilService {
     model: string, 
     log: Logger | CorrelatedLogger
   ): Promise<DecisionPhaseOutput> {
+    const lead = this.deps.personaService.createLead('decision');
+    
     const allFindings = reports.flatMap(r => r.structuredOutput.findings);
     const context = `## All Findings\n\n${JSON.stringify(allFindings, null, 2)}\n\n## Critique Analysis\n\n${JSON.stringify(critique, null, 2)}`;
 
     const messages: Message[] = [
-      { role: 'system', content: DECISION_PHASE_PROMPT },
+      { role: 'system', content: lead.systemPrompt },
       { role: 'user', content: context }
     ];
 
@@ -307,6 +315,8 @@ export class CouncilService {
     model: string, 
     log: Logger | CorrelatedLogger
   ): Promise<SynthesisPhaseOutput> {
+    const lead = this.deps.personaService.createLead('synthesis');
+    
     // Collect accepted findings
     const acceptedFindingIds = new Set(
       decision.decisions.filter(d => d.action === 'ACCEPT').map(d => d.findingId)
@@ -327,7 +337,7 @@ export class CouncilService {
     const context = `## Original Draft Plan\n\n${params.draftPlan}\n\n${params.techStack ? `## Tech Stack\n\n${params.techStack}\n\n` : ''}## Accepted Findings\n\n${JSON.stringify(acceptedFindings, null, 2)}\n\n## Attributions\n\n${JSON.stringify(attributions, null, 2)}`;
 
     const messages: Message[] = [
-      { role: 'system', content: SYNTHESIS_PHASE_PROMPT },
+      { role: 'system', content: lead.systemPrompt },
       { role: 'user', content: context }
     ];
 
