@@ -40,9 +40,6 @@ who analyze in parallel, then a Lead Architect synthesizes their findings.`,
     context_constraints: z.string().optional().describe(
       "Runtime constraints, e.g. 'Must run on Proxmox LXC', 'No external deps'"
     ),
-    debate_mode: z.boolean().optional().default(false).describe(
-      "Experts critique each other before synthesis. Slower but more thorough."
-    ),
   },
   async (params) => {
     const draftPlan = params.draft_plan.trim();
@@ -71,8 +68,7 @@ who analyze in parallel, then a Lead Architect synthesizes their findings.`,
           draftPlan,
           techStack: params.tech_stack,
           contextConstraints: params.context_constraints,
-        },
-        { debateMode: params.debate_mode }
+        }
       );
 
       return {
@@ -107,7 +103,6 @@ server.tool(
     for (const s of sessions) {
       output += `## ${s.id.slice(0, 8)}… (${s.created_at})\n`;
       if (s.tech_stack) output += `**Stack**: ${s.tech_stack}\n`;
-      if (s.debate_mode) output += `**Debate**: Yes\n`;
       if (s.draft_plan_summary) output += `**Plan**: ${s.draft_plan_summary}…\n`;
       output += "\n";
     }

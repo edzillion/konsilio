@@ -8,7 +8,6 @@
 import type { Persona } from './types.js';
 import { uxDxDesigner } from './ux-dx.js';
 import { devopsEngineer } from './devops.js';
-import { leadArchitect } from './lead.js';
 import { performanceEngineer } from './performance.js';
 import { securityArchitect } from './security.js';
 import { typescriptEngineer } from './typescript-engineer.js';
@@ -16,7 +15,6 @@ import { typescriptEngineer } from './typescript-engineer.js';
 // Export individual personas
 export { uxDxDesigner } from './ux-dx.js';
 export { devopsEngineer } from './devops.js';
-export { leadArchitect } from './lead.js';
 export { performanceEngineer } from './performance.js';
 export { securityArchitect } from './security.js';
 export { typescriptEngineer } from './typescript-engineer.js';
@@ -24,8 +22,11 @@ export { typescriptEngineer } from './typescript-engineer.js';
 // Export types
 export * from './types.js';
 
+// Export consolidation phases
+export * from './consolidation.js';
+
 /**
- * All expert personas (excludes lead architect)
+ * All expert personas
  */
 export const expertPersonas: Persona[] = [
   securityArchitect,
@@ -36,12 +37,9 @@ export const expertPersonas: Persona[] = [
 ];
 
 /**
- * All personas including lead architect
+ * All personas (same as expertPersonas - no lead architect in new architecture)
  */
-export const allPersonas: Persona[] = [
-  ...expertPersonas,
-  leadArchitect,
-];
+export const allPersonas: Persona[] = expertPersonas;
 
 /**
  * PersonaCollection - A registry of all available personas

@@ -70,7 +70,7 @@ not averaging
 
 🧠 1. What practitioners are seeing (real-world patterns)
 
-Across Reddit (r/LocalLLaMA, r/PromptEngineering, r/MachineLearning) and internal writeups, there are two recurring observations:
+Across Reddit (r/LocalLLaMA, r/PromptEngineering, r/MachineLearning) and internal write-ups, there are two recurring observations:
 
 ## Pattern A — “Consensus systems fail silently”
 

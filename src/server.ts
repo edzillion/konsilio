@@ -127,8 +127,7 @@ async function handleAnalyze(
         draftPlan: parsed.draft_plan,
         techStack: parsed.tech_stack,
         contextConstraints: parsed.context_constraints,
-      },
-      { debateMode: parsed.debate_mode ?? false }
+      }
     );
     
     res.statusCode = 200;
@@ -138,20 +137,16 @@ async function handleAnalyze(
         persona_id: r.personaId,
         persona_name: r.personaName,
         persona_emoji: r.personaEmoji,
-        content: r.content,
+        structured_output: r.structuredOutput,
         duration_ms: r.durationMs,
         model_used: r.modelUsed,
       })),
-      debate_reports: result.debateReports?.map(r => ({
-        persona_id: r.personaId,
-        persona_name: r.personaName,
-        persona_emoji: r.personaEmoji,
-        content: r.content,
-        duration_ms: r.durationMs,
-        model_used: r.modelUsed,
-      })),
+      extraction_output: result.extractionOutput,
+      critique_output: result.critiqueOutput,
+      decision_output: result.decisionOutput,
+      synthesis_output: result.synthesisOutput,
       final_blueprint: result.finalBlueprint,
-      lead_model: result.leadModel,
+      consolidation_model: result.consolidationModel,
       total_duration_ms: result.totalDurationMs,
     }, null, 2));
   } catch (err) {
