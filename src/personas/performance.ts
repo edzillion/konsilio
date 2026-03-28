@@ -31,7 +31,7 @@ export const performanceEngineer: Persona = {
     title: "Performance Engineer",
     reviewFocus: "bottlenecks and cost waste",
     antiPatterns: PERFORMANCE_ANTI_PATTERNS,
-    criticalRules: {
+    coreRules: {
       componentType: "endpoint/flow/query",
       issueDescription: "specific performance bottleneck",
       mitigationRequirement: "include estimated impact (e.g., '~200ms reduction') when possible",

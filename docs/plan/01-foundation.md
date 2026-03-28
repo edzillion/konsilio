@@ -78,7 +78,7 @@ LEAD_MODEL=google/gemini-2.5-pro
 DEBATE_MODEL=google/gemini-2.5-flash-lite
 
 # Optional
-DATABASE_PATH=./data/council.db
+DATABASE_PATH=./data/konsilio.db
 DRAFT_PLAN_MAX_LENGTH=12000
 MAX_HISTORY_SESSIONS=10
 ```
@@ -164,7 +164,7 @@ export const config = {
   maxDraftPlanLength: parseInt(env("DRAFT_PLAN_MAX_LENGTH", "12000") ?? "12000", 10),
   maxHistorySessions: parseInt(env("MAX_HISTORY_SESSIONS", "10") ?? "10", 10),
   maxParallelExperts: 4,
-  databasePath: env("DATABASE_PATH", "./data/council.db"),
+  databasePath: env("DATABASE_PATH", "./data/konsilio.db"),
 } as const;
 ```
 

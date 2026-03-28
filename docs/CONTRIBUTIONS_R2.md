@@ -177,7 +177,7 @@ The reference implementation uses 2048 for experts but 8192 for the lead. Since 
 
 ### M5. Missing `data/` Directory Auto-Creation
 
-**Problem**: The SQLite database path is `./data/council.db`, but nothing creates the `data/` directory. `better-sqlite3` will throw `SQLITE_CANTOPEN` if the directory doesn't exist.
+**Problem**: The SQLite database path is `./data/konsilio.db`, but nothing creates the `data/` directory. `better-sqlite3` will throw `SQLITE_CANTOPEN` if the directory doesn't exist.
 
 **Fix applied**: Added `mkdirSync(dirname(dbPath), { recursive: true })` before database initialization.
 

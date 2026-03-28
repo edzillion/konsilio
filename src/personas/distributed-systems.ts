@@ -32,7 +32,7 @@ export const distributedSystemsEngineer: Persona = {
     title: "Distributed Systems and Concurrency Engineer",
     reviewFocus: "distributed systems issues",
     antiPatterns: DISTRIBUTED_SYSTEMS_ANTI_PATTERNS,
-    criticalRules: {
+    coreRules: {
       componentType: "service/flow/component",
       issueDescription: "specific distributed systems problem",
       mitigationRequirement: "be concrete with specific patterns, thresholds, and fallback behaviors",

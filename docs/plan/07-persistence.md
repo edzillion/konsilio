@@ -246,7 +246,7 @@ server.tool(
 ## Verification
 
 1. **Build**: `npm run build`
-2. **Call council** → Check `data/council.db` exists
+2. **Call council** → Check `data/konsilio.db` exists
 3. **Call `get_session_history`** → Previous session appears
 4. **Restart VS Code** → History persists
 5. **Set `DATABASE_PATH=` (empty)** → Council works without persistence
