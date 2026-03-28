@@ -1,0 +1,241 @@
+## Pattern: “critique loops” outperform single-pass outputs
+
+From both Reddit + research direction:
+
+iterative refinement (like code review)
+role-based agents (architect / reviewer / PM)
+structured outputs
+
+This mirrors academic work on multi-agent software processes improving quality
+
+👉 For your system:
+Don’t do:
+
+input → model → improved proposal
+
+Do:
+
+input → analysis → issues list → prioritized fixes → rewrite → validation
+
+## Pattern: fine-tuning < structured context + feedback loops
+
+From both Reddit + papers:
+
+fine-tuning helps, but:
+interactive / iterative prompting beats static setups
+
+👉 Meaning:
+
+Better to build:
+feedback cycles
+structured schema
+than:
+heavy fine-tuning early
+
+
+🔹 1. Don’t let experts see each other
+
+Reddit insight:
+
+parallel independence > cross-contamination
+🔹 2. Force disagreement
+
+Prompt experts to:
+
+challenge assumptions
+identify risks, not just improvements
+🔹 3. Structured outputs > prose
+
+Example:
+
+Instead of:
+
+"Here’s my analysis..."
+
+Use:
+
+- Issues:
+- Risks:
+- Missing assumptions:
+- Suggested fixes:
+🔹 4. Chair should not “trust consensus”
+
+Consensus ≠ correctness
+
+You want:
+
+conflict detection
+not averaging
+
+
+🧠 1. What practitioners are seeing (real-world patterns)
+
+Across Reddit (r/LocalLLaMA, r/PromptEngineering, r/MachineLearning) and internal writeups, there are two recurring observations:
+
+## Pattern A — “Consensus systems fail silently”
+
+Teams report:
+
+multiple agents agreeing on a wrong assumption → final output looks polished but is incorrect
+
+This happens a lot in:
+
+proposal analysis
+system design critique
+product planning
+
+Why?
+
+models share the same priors
+they converge on the same plausible but wrong interpretation
+
+## Pattern B — “Aggregation ≠ validation”
+
+Another repeated insight:
+
+aggregator models don’t reliably detect contradictions unless explicitly tasked
+
+Even strong long-context models (like Kimi K2) tend to:
+
+summarize
+reconcile tone
+smooth disagreement
+
+…but NOT:
+
+aggressively reject bad inputs
+trace logical inconsistencies across experts
+
+👉 This is the key limitation of “chair-only” (called leadArchitect in our system) designs.
+
+## concern: error amplification
+
+This is 100% real and widely discussed.
+
+This happens when:
+
+each layer rewrites content
+small hallucinations propagate
+signal degrades across steps
+
+✅ 3. The important distinction most people miss
+❌ Bad judge design (causes drift)
+rewrites expert outputs
+merges content
+adds new ideas
+acts like another “expert”
+
+👉 This creates:
+
+compounding hallucinations
+loss of traceability
+✅ Good judge design (what actually works)
+
+The judge should:
+
+NOT rewrite anything
+NOT generate new solutions
+ONLY:
+compare
+score
+flag
+select
+
+Think of it as:
+
+“a static analyzer, not a co-author”
+
+
+🔍 4. Evidence from real system designs
+Case 1: Multi-agent coding systems (widely discussed)
+
+Teams found:
+
+multiple coders → good diversity
+aggregator → decent output
+BUT:
+
+adding a “reviewer” that flags bugs before merge drastically improves correctness
+
+Key detail:
+
+reviewer does NOT rewrite code
+only comments / blocks / approves
+
+👉 Direct analogy to your setup.
+
+Case 2: RAG + critique pipelines
+
+Reported pattern:
+
+generation step produces plausible answer
+critique step:
+identifies unsupported claims
+flags inconsistencies
+
+Result:
+
+large drop in hallucination rate
+
+BUT only when:
+
+critique is separate from rewriting
+Case 3: Proposal / document analysis systems (closest to yours)
+
+Common failure:
+
+model confidently fills in missing requirements
+
+Fix reported by practitioners:
+
+introduce a step that explicitly asks:
+“what assumptions are unverified?”
+“what conflicts exist between analyses?”
+
+👉 That’s effectively a judge layer.
+
+## Strong chair with judge behavior
+Pros:
+simpler pipeline
+fewer transformations
+less drift risk
+Cons:
+harder to enforce:
+real critique vs summarization
+model may:
+default to “nice synthesis”
+miss contradictions
+###  Implementation
+Single strong model, but with internally separated phases
+experts → strong chair:
+
+  phase 1: analyze experts (no synthesis)
+  phase 2: detect conflicts / errors
+  phase 3: decide what is correct
+  phase 4: produce final plan
+
+### Enforce this structure:
+Step 1 — Extraction (no rewriting)
+
+Chair outputs:
+
+key claims per expert
+assumptions
+identified issues
+Step 2 — Critique (judge mode)
+
+Chair MUST:
+
+list:
+contradictions
+weak reasoning
+unsupported claims
+Step 3 — Decision
+
+Chair selects:
+
+best insights
+rejects bad ones
+Step 4 — Synthesis (only now)
+
+Final coherent plan
