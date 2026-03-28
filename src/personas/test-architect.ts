@@ -32,7 +32,7 @@ export const testArchitect: Persona = {
     title: "QA/Test Architect (AI Systems)",
     reviewFocus: "testability and validation strategy",
     antiPatterns: TEST_ARCHITECT_ANTI_PATTERNS,
-    coreRules: {
+    expertRules: {
       componentType: "test suite/scenario",
       issueDescription: "specific testing gap or quality risk",
       mitigationRequirement: "be concrete with test types, coverage targets, and verification methods",

@@ -31,7 +31,7 @@ export const typescriptEngineer: Persona = {
     title: "TypeScript Engineer",
     reviewFocus: "TypeScript-specific issues",
     antiPatterns: TYPESCRIPT_ANTI_PATTERNS,
-    coreRules: {
+    expertRules: {
       componentType: "type/module/function",
       issueDescription: "TypeScript-specific problem",
       mitigationRequirement: "be concrete with specific type definitions or patterns",

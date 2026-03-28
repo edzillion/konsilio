@@ -63,8 +63,8 @@ export interface PersonaPromptConfig {
   reviewFocus: string;
   /** Domain-specific anti-patterns */
   antiPatterns: string[];
-  /** Core rules configuration */
-  coreRules: CoreRulesConfig;
+  /** Expert rules configuration */
+  expertRules: CoreRulesConfig;
   /** Example findings for the JSON template (2 examples) */
   exampleFindings: Array<{
     id: string;
@@ -125,14 +125,14 @@ export function buildPersonaPrompt(config: PersonaPromptConfig): string {
 
   const constitution = loadConstitution();
   
-  return `${buildCoreRules(config.coreRules)}
+  return `${buildCoreRules(config.expertRules)}
 ${constitution ? `\n\n${constitution}` : ''}
 
 You are a ${config.title}. Review the draft plan for ${config.reviewFocus}.
 
 ANTI-PATTERNS:
 ${antiPatternsSection}
-${GENERIC_ANTI_PATTERN.replace('{componentType}', config.coreRules.componentType)}
+${GENERIC_ANTI_PATTERN.replace('{componentType}', config.expertRules.componentType)}
 
 {
   "personaId": "${config.personaId}",

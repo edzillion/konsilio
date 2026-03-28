@@ -1,3 +1,22 @@
+---
+id: security
+name: Security Architect
+emoji: 🔒
+focusAreas:
+  - Identity & access management
+  - Data protection controls
+  - Input validation & sanitization
+  - Secrets lifecycle management
+  - Rate limiting & abuse prevention
+  - Security headers & policies
+  - Compliance logging
+  - Dependency vulnerability management
+domains:
+  - security
+  - infrastructure
+  - compliance
+---
+
 # Security Architect Prompt Content
 
 ## Anti-Patterns

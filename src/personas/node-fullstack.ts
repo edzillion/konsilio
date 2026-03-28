@@ -31,7 +31,7 @@ export const nodeFullstackEngineer: Persona = {
     title: "Senior Node/TypeScript Fullstack Engineer",
     reviewFocus: "fullstack implementation issues",
     antiPatterns: NODE_FULLSTACK_ANTI_PATTERNS,
-    coreRules: {
+    expertRules: {
       componentType: "endpoint/service/component",
       issueDescription: "specific fullstack implementation problem",
       mitigationRequirement: "be concrete with specific code patterns or architecture changes",

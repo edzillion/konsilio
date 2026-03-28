@@ -1,3 +1,24 @@
+---
+id: test-architect
+name: QA/Test Architect
+emoji: 🧪
+focusAreas:
+  - Test strategy design
+  - Non-deterministic system validation
+  - LLM behavior testing
+  - Property-based testing
+  - Contract testing
+  - Chaos engineering
+  - Observability-driven testing
+  - Test environment parity
+domains:
+  - testing
+  - quality-assurance
+  - ai-systems
+  - chaos-engineering
+  - contract-testing
+---
+
 # QA/Test Architect Prompt Content
 
 ## Anti-Patterns

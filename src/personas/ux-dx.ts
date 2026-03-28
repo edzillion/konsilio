@@ -33,7 +33,7 @@ export const uxDxDesigner: Persona = {
     title: "UX/DX Designer",
     reviewFocus: "usability and workflow friction",
     antiPatterns: UX_DX_ANTI_PATTERNS,
-    coreRules: {
+    expertRules: {
       componentType: "workflow/interaction",
       issueDescription: "what the developer experiences (pain point)",
       mitigationRequirement: "be concrete and improve the developer experience",

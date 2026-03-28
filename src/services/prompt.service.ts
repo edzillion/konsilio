@@ -15,6 +15,11 @@ export interface PromptServiceConfig {
 }
 
 export interface PersonaPromptData {
+  id: string;
+  name: string;
+  emoji: string;
+  focusAreas: string[];
+  domains?: string[];
   antiPatterns: string[];
   exampleFindings: Array<{
     id: string;
@@ -90,20 +95,20 @@ export class PromptService {
   }
 
   /**
-   * Load core rules from markdown file
+   * Load expert rules from markdown file
    */
   loadCoreRules(): string {
-    const filePath = join(this.promptsDir, '_core-rules.md');
+    const filePath = join(this.promptsDir, 'expert_rules.md');
     
     if (!existsSync(filePath)) {
-      this.logger.warn(`Core rules file not found: ${filePath}`);
+      this.logger.warn(`Expert rules file not found: ${filePath}`);
       return '';
     }
 
     try {
       return readFileSync(filePath, 'utf-8');
     } catch (err) {
-      this.logger.error('Failed to load core rules', {
+      this.logger.error('Failed to load expert rules', {
         error: err instanceof Error ? err.message : String(err),
       });
       return '';
@@ -135,13 +140,93 @@ export class PromptService {
    * Parse persona prompt data from markdown content
    */
   private parsePersonaPromptData(content: string): PersonaPromptData {
+    const metadata = this.extractYamlFrontmatter(content);
     return {
+      id: metadata.id,
+      name: metadata.name,
+      emoji: metadata.emoji,
+      focusAreas: metadata.focusAreas || [],
+      domains: metadata.domains,
       antiPatterns: this.extractList(content, '## Anti-Patterns'),
       exampleFindings: this.extractFindings(content, '### Findings'),
       exampleRisks: this.extractRisks(content, '### Risks'),
       exampleMissingAssumptions: this.extractList(content, '### Missing Assumptions'),
       exampleDependencies: this.extractList(content, '### Dependencies'),
     };
+  }
+
+  /**
+   * Extract YAML frontmatter from markdown content
+   */
+  private extractYamlFrontmatter(content: string): {
+    id: string;
+    name: string;
+    emoji: string;
+    focusAreas: string[];
+    domains?: string[];
+  } {
+    const match = content.match(/^---\n([\s\S]*?)\n---\n/);
+    
+    if (!match) {
+      this.logger.warn('No YAML frontmatter found in persona markdown file');
+      return { id: '', name: '', emoji: '', focusAreas: [] };
+    }
+    
+    const yaml = match[1];
+    const result: any = { id: '', name: '', emoji: '', focusAreas: [], domains: undefined };
+    
+    // Simple YAML parsing for our specific format
+    const lines = yaml.split('\n');
+    let currentKey = '';
+    let currentArray: string[] = [];
+    
+    for (const line of lines) {
+      const trimmed = line.trim();
+      
+      // Skip empty lines
+      if (!trimmed) continue;
+      
+      // Check if it's an array item
+      if (trimmed.startsWith('- ')) {
+        currentArray.push(trimmed.slice(2).trim());
+        continue;
+      }
+      
+      // If we were building an array, save it and reset
+      if (currentKey && currentArray.length > 0) {
+        result[currentKey] = [...currentArray];
+        currentKey = '';
+        currentArray = [];
+      }
+      
+      // Parse key: value
+      const colonIndex = trimmed.indexOf(':');
+      if (colonIndex > 0) {
+        const key = trimmed.slice(0, colonIndex).trim();
+        let value = trimmed.slice(colonIndex + 1).trim();
+        
+        // Remove quotes if present
+        if ((value.startsWith('"') && value.endsWith('"')) || 
+            (value.startsWith("'") && value.endsWith("'"))) {
+          value = value.slice(1, -1);
+        }
+        
+        if (value) {
+          result[key] = value;
+        } else {
+          // Empty value means this is an array key
+          currentKey = key;
+          currentArray = [];
+        }
+      }
+    }
+    
+    // Save any remaining array
+    if (currentKey && currentArray.length > 0) {
+      result[currentKey] = [...currentArray];
+    }
+    
+    return result;
   }
 
   /**
@@ -231,6 +316,11 @@ export class PromptService {
    */
   private getDefaultPersonaPromptData(): PersonaPromptData {
     return {
+      id: 'unknown',
+      name: 'Unknown Persona',
+      emoji: '?',
+      focusAreas: [],
+      domains: [],
       antiPatterns: [],
       exampleFindings: [],
       exampleRisks: [],

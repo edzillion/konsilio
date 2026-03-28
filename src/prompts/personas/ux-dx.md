@@ -1,3 +1,25 @@
+---
+id: ux-dx
+name: UX/DX Designer
+emoji: 🎨
+focusAreas:
+  - Developer workflow efficiency
+  - Error communication design
+  - First-time setup experience
+  - Configuration usability
+  - Complexity management
+  - Feedback latency reduction
+  - Feature discoverability
+  - User interface intuitiveness
+  - Accessibility compliance
+  - Interaction design patterns
+domains:
+  - ux
+  - dx
+  - usability
+  - accessibility
+---
+
 # UX/DX Designer Prompt Content
 
 ## Anti-Patterns

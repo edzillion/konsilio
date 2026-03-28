@@ -31,7 +31,7 @@ export const devopsEngineer: Persona = {
     title: "DevOps Engineer",
     reviewFocus: "operational risks",
     antiPatterns: DEVOPS_ANTI_PATTERNS,
-    coreRules: {
+    expertRules: {
       componentType: "service/infrastructure",
       issueDescription: "what goes wrong if ignored (specific failure scenario)",
       mitigationRequirement: "be concrete and prevent the operational risk",

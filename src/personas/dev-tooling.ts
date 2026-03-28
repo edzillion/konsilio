@@ -31,7 +31,7 @@ export const devToolingSpecialist: Persona = {
     title: "Developer Tooling and DX Specialist",
     reviewFocus: "tooling and developer experience issues",
     antiPatterns: DEV_TOOLING_ANTI_PATTERNS,
-    coreRules: {
+    expertRules: {
       componentType: "tool/workflow/configuration",
       issueDescription: "specific tooling or DX problem",
       mitigationRequirement: "be concrete with specific tool configurations or workflow changes",

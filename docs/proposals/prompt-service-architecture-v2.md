@@ -15,7 +15,7 @@ Externalize prompt content to markdown files while keeping the proven template l
 ```
 src/services/prompt.service.ts    # Service for loading prompt content
 src/prompts/
-  _core-rules.md                  # Core rules (static content)
+  expert_rules.md                  # Expert rules (static content)
   workflow-rules.md               # Single run rules (constitution)
   personas/
     security.md                   # Security anti-patterns + examples
@@ -101,7 +101,7 @@ export class PromptService {
 
   loadCoreRules(): string {
     return readFileSync(
-      join(this.promptsDir, '_core-rules.md'),
+      join(this.promptsDir, 'expert_rules.md'),
       'utf-8'
     );
   }
@@ -153,7 +153,7 @@ export const securityArchitect: Persona = {
     title: "Security Architect",
     reviewFocus: "security risks",
     antiPatterns: personaPromptData.antiPatterns,
-    coreRules: { /* unchanged */ },
+    expertRules: { /* unchanged */ },
     exampleFindings: personaPromptData.exampleFindings,
     exampleRisks: personaPromptData.exampleRisks,
     exampleMissingAssumptions: personaPromptData.exampleMissingAssumptions,
