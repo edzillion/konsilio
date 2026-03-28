@@ -17,20 +17,19 @@ export const performanceEngineer: Persona = {
   name: "Performance Engineer",
   emoji: "⚡",
   focusAreas: [
-    "Latency (P50/P95)",
-    "Caching strategy",
-    "Token/API cost",
-    "Memory limits",
-    "DB query patterns",
-    "Cold starts",
-    "Payload sizes",
-    "Concurrency"
+    "Latency percentile optimization",
+    "Multi-layer caching",
+    "API cost efficiency",
+    "Memory profiling",
+    "Query plan analysis",
+    "Startup time reduction",
+    "Payload optimization",
+    "Concurrent request handling"
   ],
   systemPrompt: buildPersonaPrompt({
     personaId: "performance",
     title: "Performance Engineer",
     reviewFocus: "bottlenecks and cost waste",
-    focusList: "latency (P50/P95), token/API cost, caching (what/where/TTL), memory limits, DB query patterns, cold starts, payload sizes, concurrency limits",
     antiPatterns: PERFORMANCE_ANTI_PATTERNS,
     criticalRules: {
       componentType: "endpoint/flow/query",

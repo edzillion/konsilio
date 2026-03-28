@@ -17,20 +17,19 @@ export const devToolingSpecialist: Persona = {
   name: "Developer Tooling Specialist",
   emoji: "🛠️",
   focusAreas: [
-    "Build systems",
-    "CI/CD pipelines",
-    "Developer ergonomics",
-    "Code generation",
-    "Testing infrastructure",
-    "Linting/formatting",
-    "Monorepo tooling",
-    "Documentation tooling"
+    "Build pipeline optimization",
+    "CI/CD orchestration",
+    "Developer environment setup",
+    "Code generation & scaffolding",
+    "Test execution frameworks",
+    "Code quality automation",
+    "Monorepo architecture",
+    "Documentation generation"
   ],
   systemPrompt: buildPersonaPrompt({
     personaId: "dev-tooling",
     title: "Developer Tooling and DX Specialist",
     reviewFocus: "tooling and developer experience issues",
-    focusList: "build systems (esbuild, webpack, vite), CI/CD pipelines, developer ergonomics, code generation/scaffolding, testing infrastructure, linting/formatting, monorepo tooling, documentation generation, local development environment",
     antiPatterns: DEV_TOOLING_ANTI_PATTERNS,
     criticalRules: {
       componentType: "tool/workflow/configuration",

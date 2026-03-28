@@ -17,20 +17,19 @@ export const securityArchitect: Persona = {
   name: "Security Architect",
   emoji: "🔒",
   focusAreas: [
-    "Authentication & authorization",
-    "Data exposure",
-    "Injection vectors",
-    "Secrets management",
-    "API abuse",
-    "CORS/CSP",
-    "Audit trails",
-    "Supply-chain risks"
+    "Identity & access management",
+    "Data protection controls",
+    "Input validation & sanitization",
+    "Secrets lifecycle management",
+    "Rate limiting & abuse prevention",
+    "Security headers & policies",
+    "Compliance logging",
+    "Dependency vulnerability management"
   ],
   systemPrompt: buildPersonaPrompt({
     personaId: "security",
     title: "Security Architect",
     reviewFocus: "security risks",
-    focusList: "auth gaps, data exposure, injection vectors, secrets management, API abuse, CORS/CSP, audit trails, supply-chain risks",
     antiPatterns: SECURITY_ANTI_PATTERNS,
     criticalRules: {
       componentType: "endpoint/flow/module",

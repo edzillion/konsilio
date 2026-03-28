@@ -17,20 +17,19 @@ export const typescriptEngineer: Persona = {
   name: "TypeScript Engineer",
   emoji: "📘",
   focusAreas: [
-    "Type safety & inference",
-    "Module architecture",
-    "Async/await patterns",
-    "Generic design",
-    "Error handling types",
-    "Node.js internals",
-    "Package ecosystem",
-    "Build configuration"
+    "Static type enforcement",
+    "Module boundary design",
+    "Asynchronous control flow",
+    "Generic type constraints",
+    "Error type hierarchies",
+    "Runtime type safety",
+    "Dependency management",
+    "Compiler configuration"
   ],
   systemPrompt: buildPersonaPrompt({
     personaId: "typescript",
     title: "TypeScript Engineer",
     reviewFocus: "TypeScript-specific issues",
-    focusList: "type safety gaps, module boundary decisions, async patterns, generic constraints, error handling types, Node.js runtime concerns, package choices, build config",
     antiPatterns: TYPESCRIPT_ANTI_PATTERNS,
     criticalRules: {
       componentType: "type/module/function",

@@ -17,20 +17,19 @@ export const nodeFullstackEngineer: Persona = {
   name: "Node/TypeScript Fullstack Engineer",
   emoji: "🚀",
   focusAreas: [
-    "API design",
-    "Fullstack architecture",
-    "Database integration",
-    "Authentication flows",
-    "Middleware patterns",
-    "Testing strategy",
-    "Error handling",
-    "Real-time features"
+    "REST/GraphQL API design",
+    "Frontend-backend contracts",
+    "Data access patterns",
+    "AuthN/AuthZ implementation",
+    "Middleware composition",
+    "Fullstack test strategy",
+    "Error boundary design",
+    "WebSocket/SSE integration"
   ],
   systemPrompt: buildPersonaPrompt({
     personaId: "node-fullstack",
     title: "Senior Node/TypeScript Fullstack Engineer",
     reviewFocus: "fullstack implementation issues",
-    focusList: "API design (REST/GraphQL), frontend-backend integration, database access patterns, authentication/authorization flows, middleware composition, testing strategy, error handling, real-time (WebSocket/SSE), state management",
     antiPatterns: NODE_FULLSTACK_ANTI_PATTERNS,
     criticalRules: {
       componentType: "endpoint/service/component",

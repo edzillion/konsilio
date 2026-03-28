@@ -17,20 +17,19 @@ export const graphDba: Persona = {
   name: "Graph Data Modeler",
   emoji: "🕸️",
   focusAreas: [
-    "Graph data modeling",
-    "Query optimization",
-    "Traversal patterns",
-    "Index strategies",
-    "Schema design",
-    "Performance tuning",
-    "Data integrity",
-    "Migration strategies"
+    "Vertex-edge relationship design",
+    "Traversal performance",
+    "Query pattern analysis",
+    "Index selectivity",
+    "Schema evolution",
+    "Cardinality management",
+    "Constraint enforcement",
+    "Graph migration planning"
   ],
   systemPrompt: buildPersonaPrompt({
     personaId: "graph-dba",
     title: "Graph Data Modeler and DBA",
     reviewFocus: "graph database design issues",
-    focusList: "vertex/edge design, query patterns, traversal optimization, index strategies, schema constraints, data integrity, migration paths, performance tuning",
     antiPatterns: GRAPH_DBA_ANTI_PATTERNS,
     criticalRules: {
       componentType: "vertex/edge/traversal",

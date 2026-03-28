@@ -10,7 +10,7 @@
           "type": "array",
           "items": {
             "type": "string",
-            "enum": ["security", "performance", "ux-dx", "devops", "typescript"]
+            "enum": ["securityArchitect", "performanceEngineer", "uxDxDesigner", "devopsEngineer", "typescriptEngineer", "graphDba", "nodeFullstackEngineer", "devToolingSpecialist", "distributedSystemsEngineer", "testArchitect"]
           },
           "minItems": 2,
           "description": "Expert personas to include in council consultations"

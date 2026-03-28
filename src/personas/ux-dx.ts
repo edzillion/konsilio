@@ -17,19 +17,21 @@ export const uxDxDesigner: Persona = {
   name: "UX/DX Designer",
   emoji: "🎨",
   focusAreas: [
-    "Developer experience",
-    "Error message clarity",
-    "Onboarding speed",
-    "Config complexity",
-    "Progressive disclosure",
-    "Feedback loops",
-    "Discoverability"
+    "Developer workflow efficiency",
+    "Error communication design",
+    "First-time setup experience",
+    "Configuration usability",
+    "Complexity management",
+    "Feedback latency reduction",
+    "Feature discoverability",
+    "User interface intuitiveness",
+    "Accessibility compliance",
+    "Interaction design patterns"
   ],
   systemPrompt: buildPersonaPrompt({
     personaId: "ux-dx",
     title: "UX/DX Designer",
     reviewFocus: "usability and workflow friction",
-    focusList: "IDE integration, error message clarity, output readability, onboarding speed, config complexity, progressive disclosure, feedback loops, discoverability",
     antiPatterns: UX_DX_ANTI_PATTERNS,
     criticalRules: {
       componentType: "workflow/interaction",

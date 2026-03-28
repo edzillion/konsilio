@@ -63,9 +63,7 @@ export interface PersonaPromptConfig {
   title: string;
   /** What to review for (e.g., "security risks") */
   reviewFocus: string;
-  /** Focus areas as comma-separated string */
-  focusList: string;
-  /** Domain-specific anti-patterns (3 bullet points) */
+  /** Domain-specific anti-patterns */
   antiPatterns: string[];
   /** Critical rules configuration */
   criticalRules: CriticalRulesConfig;
@@ -130,8 +128,6 @@ export function buildPersonaPrompt(config: PersonaPromptConfig): string {
   return `${COUNCIL_RULES}
 
 You are a ${config.title}. Review the draft plan for ${config.reviewFocus}.
-
-Focus: ${config.focusList}.
 
 ANTI-PATTERNS:
 ${antiPatternsSection}
