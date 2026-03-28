@@ -37,6 +37,13 @@ src/
 4. **Keep tests lean** - Single developer doesn't need exhaustive coverage
 5. **Test the DI container** - Ensure services wire up correctly
 
+## Notes
+
+* ALWAYS check the implementation of the class to be tested and review the code to ensure the test is appropriate. Take note of the parameter types and design tests with typed asserts that use them. Use types and typed arrays consistently
+* ALSO check the related resource and config files and use the values present in those json files as the 'expected' values in tests
+* Use test helpers/utils wherever possible, add new helpers where code duplication can be reduced.
+
+
 ## Critical Areas to Test First
 
 ### 1. **CouncilService** (Core Business Logic)
