@@ -21,22 +21,6 @@ export interface PersonaPromptData {
   focusAreas: string[];
   domains?: string[];
   antiPatterns: string[];
-  exampleFindings: Array<{
-    id: string;
-    severity: string;
-    component: string;
-    issue: string;
-    mitigation: string;
-  }>;
-  exampleRisks: Array<{
-    id: string;
-    category: string;
-    probability: string;
-    impact: string;
-    description: string;
-  }>;
-  exampleMissingAssumptions: string[];
-  exampleDependencies: string[];
 }
 
 /**
@@ -98,7 +82,7 @@ export class PromptService {
    * Load expert rules from markdown file
    */
   loadCoreRules(): string {
-    const filePath = join(this.promptsDir, 'expert_rules.md');
+    const filePath = join(this.promptsDir, 'expert-rules.md');
     
     if (!existsSync(filePath)) {
       this.logger.warn(`Expert rules file not found: ${filePath}`);
@@ -141,17 +125,15 @@ export class PromptService {
    */
   private parsePersonaPromptData(content: string): PersonaPromptData {
     const metadata = this.extractYamlFrontmatter(content);
+    const antiPatterns = this.extractAntiPatterns(content);
+    
     return {
       id: metadata.id,
       name: metadata.name,
       emoji: metadata.emoji,
-      focusAreas: metadata.focusAreas || [],
+      focusAreas: metadata.focusAreas,
       domains: metadata.domains,
-      antiPatterns: this.extractList(content, '## Anti-Patterns'),
-      exampleFindings: this.extractFindings(content, '### Findings'),
-      exampleRisks: this.extractRisks(content, '### Risks'),
-      exampleMissingAssumptions: this.extractList(content, '### Missing Assumptions'),
-      exampleDependencies: this.extractList(content, '### Dependencies'),
+      antiPatterns,
     };
   }
 
@@ -173,7 +155,13 @@ export class PromptService {
     }
     
     const yaml = match[1];
-    const result: any = { id: '', name: '', emoji: '', focusAreas: [], domains: undefined };
+    const result: { id: string; name: string; emoji: string; focusAreas: string[]; domains?: string[] } = {
+      id: '',
+      name: '',
+      emoji: '',
+      focusAreas: [],
+      domains: undefined,
+    };
     
     // Simple YAML parsing for our specific format
     const lines = yaml.split('\n');
@@ -194,7 +182,7 @@ export class PromptService {
       
       // If we were building an array, save it and reset
       if (currentKey && currentArray.length > 0) {
-        result[currentKey] = [...currentArray];
+        (result as Record<string, string[] | string | undefined>)[currentKey] = [...currentArray];
         currentKey = '';
         currentArray = [];
       }
@@ -212,7 +200,7 @@ export class PromptService {
         }
         
         if (value) {
-          result[key] = value;
+          (result as Record<string, string[] | string | undefined>)[key] = value;
         } else {
           // Empty value means this is an array key
           currentKey = key;
@@ -223,19 +211,18 @@ export class PromptService {
     
     // Save any remaining array
     if (currentKey && currentArray.length > 0) {
-      result[currentKey] = [...currentArray];
+      (result as unknown as Record<string, unknown>)[currentKey] = [...currentArray];
     }
     
     return result;
   }
 
   /**
-   * Extract a list from markdown content under a header
+   * Extract anti-patterns from markdown content
    */
-  private extractList(content: string, header: string): string[] {
-    // Match header followed by list items until next header or end
-    const regex = new RegExp(`${this.escapeRegex(header)}\\n((?:- .+\\n?)+)`, 'm');
-    const match = content.match(regex);
+  private extractAntiPatterns(content: string): string[] {
+    // Find the Anti-Patterns section and extract list items
+    const match = content.match(/## Anti-Patterns\n\n([\s\S]*?)(?=\n## |$)/);
     
     if (!match) return [];
     
@@ -243,72 +230,6 @@ export class PromptService {
       .split('\n')
       .filter(line => line.startsWith('- '))
       .map(line => line.slice(2).trim());
-  }
-
-  /**
-   * Extract findings from markdown table format
-   */
-  private extractFindings(content: string, header: string): PersonaPromptData['exampleFindings'] {
-    const regex = new RegExp(`${this.escapeRegex(header)}\\n((?:- \\`.+\\`\\n?)+)`, 'm');
-    const match = content.match(regex);
-    
-    if (!match) return [];
-    
-    return match[1]
-      .split('\n')
-      .filter(line => line.startsWith('- `'))
-      .map(line => {
-        // Extract content between backticks
-        const tickMatch = line.match(/- `(.+)`/);
-        if (!tickMatch) return null;
-        
-        const values = tickMatch[1].split(' | ').map(v => v.trim());
-        
-        return {
-          id: values[0] ?? '',
-          severity: values[1] ?? 'MEDIUM',
-          component: values[2] ?? '',
-          issue: values[3] ?? '',
-          mitigation: values[4] ?? '',
-        };
-      })
-      .filter((f): f is { id: string; severity: string; component: string; issue: string; mitigation: string } => f !== null);
-  }
-
-  /**
-   * Extract risks from markdown table format
-   */
-  private extractRisks(content: string, header: string): PersonaPromptData['exampleRisks'] {
-    const regex = new RegExp(`${this.escapeRegex(header)}\\n((?:- \\`.+\\`\\n?)+)`, 'm');
-    const match = content.match(regex);
-    
-    if (!match) return [];
-    
-    return match[1]
-      .split('\n')
-      .filter(line => line.startsWith('- `'))
-      .map(line => {
-        const tickMatch = line.match(/- `(.+)`/);
-        if (!tickMatch) return null;
-        
-        const values = tickMatch[1].split(' | ').map(v => v.trim());
-        
-        return {
-          id: values[0] ?? '',
-          category: values[1] ?? 'technical-debt',
-          probability: values[2] ?? 'medium',
-          impact: values[3] ?? 'medium',
-          description: values[4] ?? '',
-        };
-      })
-      .filter((r): r is { id: string; category: string; probability: string; impact: string; description: string } => r !== null);
-  }
-
-  /**
-   * Escape special regex characters
-   */
-  private escapeRegex(str: string): string {
-    return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   }
 
   /**
@@ -322,10 +243,6 @@ export class PromptService {
       focusAreas: [],
       domains: [],
       antiPatterns: [],
-      exampleFindings: [],
-      exampleRisks: [],
-      exampleMissingAssumptions: [],
-      exampleDependencies: [],
     };
   }
 }

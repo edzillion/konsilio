@@ -8,11 +8,11 @@
 import { logger } from './logger.js';
 import { config, validateConfig } from './config.js';
 import { SCHEMA } from './db/schema.js';
-import { expertPersonas } from './personas/index.js';
 import { OpenRouterService } from './services/openrouter.service.js';
 import { DatabaseService } from './services/database.service.js';
 import { CacheService } from './services/cache.service.js';
 import { PromptService } from './services/prompt.service.js';
+import { PersonaService } from './services/persona.service.js';
 import { CouncilService, type CouncilConfig } from './services/council.service.js';
 
 export interface AppServices {
@@ -20,6 +20,7 @@ export interface AppServices {
   databaseService: DatabaseService;
   cacheService: CacheService;
   promptService: PromptService;
+  personaService: PersonaService;
   councilService: CouncilService;
 }
 
@@ -55,6 +56,13 @@ export function createServices(): AppServices {
   // Create Prompt service
   const promptService = new PromptService(undefined, logger);
 
+  // Create Persona service
+  const personaService = new PersonaService({
+    promptService,
+    cacheService,
+    logger,
+  });
+
   // Create Council service with all dependencies
   const councilConfig: CouncilConfig = {
     enabledPersonaIds: config.enabledPersonas,
@@ -68,7 +76,8 @@ export function createServices(): AppServices {
     openRouterService,
     databaseService,
     cacheService,
-    expertPersonas,
+    promptService,
+    personaService,
     config: councilConfig,
   });
 
@@ -77,6 +86,7 @@ export function createServices(): AppServices {
     databaseService,
     cacheService,
     promptService,
+    personaService,
     councilService,
   };
 }
