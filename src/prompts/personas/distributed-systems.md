@@ -1,3 +1,23 @@
+---
+id: distributed-systems
+name: Distributed Systems Engineer
+emoji: 🌐
+focusAreas:
+  - Consensus & quorum protocols
+  - Failure detection & recovery
+  - Message delivery semantics
+  - Idempotency patterns
+  - Resilience engineering (circuit breakers, bulkheads)
+  - Event-driven architectures
+  - Saga orchestration
+  - Observability (tracing, metrics)
+domains:
+  - distributed-systems
+  - concurrency
+  - fault-tolerance
+  - messaging
+---
+
 # Distributed Systems Engineer Prompt Content
 
 ## Anti-Patterns

@@ -1,3 +1,22 @@
+---
+id: devops
+name: DevOps Engineer
+emoji: 🔧
+focusAreas:
+  - Deployment orchestration
+  - Blue-green & canary releases
+  - Observability pipelines
+  - Infrastructure as Code
+  - Backup & recovery strategies
+  - Auto-scaling policies
+  - Environment parity
+  - Health check design
+domains:
+  - devops
+  - infrastructure
+  - operations
+---
+
 # DevOps Engineer Prompt Content
 
 ## Anti-Patterns

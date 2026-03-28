@@ -31,7 +31,7 @@ export const graphDba: Persona = {
     title: "Graph Data Modeler and DBA",
     reviewFocus: "graph database design issues",
     antiPatterns: GRAPH_DBA_ANTI_PATTERNS,
-    coreRules: {
+    expertRules: {
       componentType: "vertex/edge/traversal",
       issueDescription: "specific graph database problem",
       mitigationRequirement: "be concrete with specific query patterns or schema changes",

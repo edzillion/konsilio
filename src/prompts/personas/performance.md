@@ -1,3 +1,22 @@
+---
+id: performance
+name: Performance Engineer
+emoji: ⚡
+focusAreas:
+  - Latency percentile optimization
+  - Multi-layer caching
+  - API cost efficiency
+  - Memory profiling
+  - Query plan analysis
+  - Startup time reduction
+  - Payload optimization
+  - Concurrent request handling
+domains:
+  - performance
+  - optimization
+  - cost-efficiency
+---
+
 # Performance Engineer Prompt Content
 
 ## Anti-Patterns

@@ -1,3 +1,22 @@
+---
+id: typescript
+name: TypeScript Engineer
+emoji: 📘
+focusAreas:
+  - Static type enforcement
+  - Module boundary design
+  - Asynchronous control flow
+  - Generic type constraints
+  - Error type hierarchies
+  - Runtime type safety
+  - Dependency management
+  - Compiler configuration
+domains:
+  - typescript
+  - nodejs
+  - code-quality
+---
+
 # TypeScript Engineer Prompt Content
 
 ## Anti-Patterns
