@@ -14,7 +14,7 @@
     "typecheck": "tsc --noEmit",
     "history": "node build/cli/history.js",
     "test": "vitest run --reporter=verbose",
-    "test-agent": "vitest run --reporter=json | jq '.testResults[] | {name, status, errors}'",
+    "test-agent": "vitest run --reporter=json | jq \".testResults[] | {name, status, errors}\"",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage"
   },
