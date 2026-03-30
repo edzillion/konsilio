@@ -1,7 +1,7 @@
 {
   "$schema": "./konsilio.schema.json",
   "personas": {
-    "enabled": ["graph-dba", "node-fullstack", "devops", "dev-tooling", "distributed-systems", "test-architect"],
+    "enabled": ["ux-dx", "performance", "node-fullstack", "devops", "dev-tooling", "test-architect"],
     "_comment": "Available personas: security, performance, ux-dx, devops, typescript, graph-dba, node-fullstack, dev-tooling, distributed-systems, test-architect"
   },
   "constitution": "./constitution.txt",
