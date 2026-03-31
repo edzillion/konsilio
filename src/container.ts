@@ -14,6 +14,7 @@ import { CacheService } from './services/cache.service.js';
 import { PromptService } from './services/prompt.service.js';
 import { PersonaService } from './services/persona.service.js';
 import { CouncilService, type CouncilConfig } from './services/council.service.js';
+import { FormatterService, type FormatterConfig } from './services/formatter.service.js';
 
 export interface AppServices {
   openRouterService: OpenRouterService;
@@ -70,7 +71,21 @@ export function createServices(): AppServices {
     models: config.models,
     timeouts: config.timeouts,
     maxDraftPlanLength: config.maxDraftPlanLength,
+    formatterMaxRetries: config.formatterMaxRetries,
   };
+
+  // Create Formatter service
+  const formatterConfig: FormatterConfig = {
+    model: config.models.formatter,
+    timeoutMs: config.timeouts.formatterMs,
+    maxRetries: config.formatterMaxRetries,
+  };
+
+  const formatterService = new FormatterService({
+    openRouterService,
+    logger,
+    config: formatterConfig,
+  });
 
   const councilService = new CouncilService({
     logger,
@@ -79,6 +94,7 @@ export function createServices(): AppServices {
     cacheService,
     promptService,
     personaService,
+    formatterService,
     config: councilConfig,
   });
 

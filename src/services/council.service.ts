@@ -1,28 +1,27 @@
 /**
- * Council Service - 4-Phase Consolidation Pipeline
+ * Council Service - Two-Stage Consulting Pipeline
  * 
- * Orchestrates expert analysis with structured outputs and phase-based consolidation:
- * Phase 1: Expert Analysis (parallel, structured JSON output)
- * Phase 2: Extraction (extract claims from expert reports)
- * Phase 3: Critique (identify contradictions and weaknesses)
- * Phase 4: Decision (accept/reject findings)
- * Phase 5: Synthesis (assemble final blueprint)
+ * Stage 1: Expert Analysis (parallel, prose output)
+ * Stage 2: Formatting (convert prose to structured JSON via FormatterService)
+ * Stage 3: Extraction (extract claims from expert reports)
+ * Stage 4: Critique (identify contradictions and weaknesses)
+ * Stage 5: Decision (accept/reject findings)
+ * Stage 6: Synthesis (assemble final blueprint)
  */
 
 import { randomUUID } from 'node:crypto';
 import type { Logger, CorrelatedLogger } from '../logger.js';
-import { 
+import {
   StructuredExpertOutputSchema,
   ExtractionPhaseOutputSchema,
   CritiquePhaseOutputSchema,
   DecisionPhaseOutputSchema,
   SynthesisPhaseOutputSchema
 } from '../personas/schemas.js';
-import type { 
-  Persona, 
-  ExpertReport, 
+import type {
+  Persona,
+  ExpertReport,
   CouncilResult,
-  StructuredExpertOutput,
   ExtractionPhaseOutput,
   CritiquePhaseOutput,
   DecisionPhaseOutput,
@@ -34,18 +33,22 @@ import type { DatabaseService } from './database.service.js';
 import type { CacheService } from './cache.service.js';
 import type { PromptService } from './prompt.service.js';
 import type { PersonaService } from './persona.service.js';
+import type { FormatterService } from './formatter.service.js';
 
 export interface CouncilConfig {
   enabledPersonaIds: string[];
   models: {
     experts: string;
     lead: string;
+    formatter: string;
   };
   timeouts: {
     expertMs: number;
     leadMs: number;
+    formatterMs: number;
   };
   maxDraftPlanLength: number;
+  formatterMaxRetries: number;
 }
 
 export interface CouncilParams {
@@ -62,7 +65,7 @@ export interface CouncilOptions {
 }
 
 /**
- * CouncilService - Orchestrates 4-phase expert analysis and consolidation
+ * CouncilService - Orchestrates two-stage expert analysis and consolidation
  */
 export class CouncilService {
   constructor(
@@ -73,12 +76,13 @@ export class CouncilService {
       cacheService: CacheService;
       promptService: PromptService;
       personaService: PersonaService;
+      formatterService: FormatterService;
       config: CouncilConfig;
     },
   ) {}
 
   /**
-   * Run a council analysis with 4-phase consolidation
+   * Run a council analysis with two-stage consolidation
    */
   async run(params: CouncilParams, options?: CouncilOptions, correlationId?: string): Promise<CouncilResult> {
     const log = correlationId ? this.deps.logger.withCorrelationId(correlationId) : this.deps.logger;
@@ -95,7 +99,6 @@ export class CouncilService {
     const expertModel = options?.modelOverride?.experts ?? this.deps.config.models.experts;
     const consolidationModel = options?.modelOverride?.consolidation ?? this.deps.config.models.lead;
 
-    // Create experts dynamically from markdown files
     const personas = this.deps.personaService.createExperts(
       this.deps.config.enabledPersonaIds,
       expertModel
@@ -103,42 +106,90 @@ export class CouncilService {
 
     if (personas.length < 2) throw new Error(`At least 2 personas required. Found: ${this.deps.config.enabledPersonaIds.join(', ')}`);
 
-    // Phase 1: Expert Analysis (parallel, structured JSON output)
-    log.info('Phase 1: Expert Analysis');
+    // Stage 1: Expert Analysis (parallel, prose output)
+    log.debug('Stage 1: Expert Analysis (prose)');
     const userMessage = this.buildUserMessage(params);
     const expertPromises = personas.map((p) => this.callExpert(p, expertModel, userMessage, this.deps.config.timeouts.expertMs, log));
     const expertResults = await Promise.allSettled(expertPromises);
 
-    const successfulReports: ExpertReport[] = [];
+    const successfulProseReports: { persona: Persona; prose: string; durationMs: number }[] = [];
     const failedExperts: string[] = [];
     for (let i = 0; i < expertResults.length; i++) {
       const result = expertResults[i];
-      if (result.status === 'fulfilled') successfulReports.push(result.value);
+      if (result.status === 'fulfilled') successfulProseReports.push(result.value);
       else failedExperts.push(`${personas[i].emoji} ${personas[i].name}: ${result.reason}`);
     }
 
-    if (successfulReports.length < 2) throw new Error(`Too many expert failures. ${failedExperts.join('\n')}`);
+    if (successfulProseReports.length < 2) throw new Error(`Too many expert failures. ${failedExperts.join('\n')}`);
+
+    log.debug('Expert prose analysis complete', { succeeded: successfulProseReports.length, failed: failedExperts.length });
+
+    // Stage 2: Format prose to structured JSON
+    log.debug('Stage 2: Formatting prose to structured JSON');
+    const formatStart = Date.now();
+    const formatResults = await Promise.allSettled(
+      successfulProseReports.map((r) =>
+        this.deps.formatterService.formatProse(r.prose, r.persona.id, correlationId)
+      )
+    );
+
+    const successfulReports: ExpertReport[] = [];
+    const formattingErrors: string[] = [];
+    let formatSuccessCount = 0;
+
+    for (let i = 0; i < formatResults.length; i++) {
+      const result = formatResults[i];
+      const proseReport = successfulProseReports[i];
+
+      if (result.status === 'fulfilled') {
+        const formatResult = result.value;
+        successfulReports.push({
+          personaId: proseReport.persona.id,
+          personaName: proseReport.persona.name,
+          personaEmoji: proseReport.persona.emoji,
+          structuredOutput: formatResult.output,
+          rawContent: formatResult.originalProse,
+          durationMs: proseReport.durationMs + formatResult.durationMs,
+          modelUsed: this.deps.config.models.formatter
+        });
+        formatSuccessCount++;
+      } else {
+        formattingErrors.push(`${proseReport.persona.name}: ${result.reason}`);
+      }
+    }
+
+    const totalFormattingTimeMs = Date.now() - formatStart;
+    const formattingDetails = {
+      totalFormattingTimeMs,
+      formattingSuccessRate: formatSuccessCount / successfulProseReports.length,
+      formattingErrors
+    };
+
+    log.debug('Formatting complete', { successRate: formattingDetails.formattingSuccessRate, errors: formattingErrors.length });
+
+    if (successfulReports.length < 2) throw new Error(`Too many expert failures after formatting. ${failedExperts.join('\n')}`);
 
     log.info('Expert analysis complete', { succeeded: successfulReports.length, failed: failedExperts.length });
 
-    // Phase 2: Extraction
-    log.info('Phase 2: Extraction');
+    // Stage 3: Extraction
+    log.debug('Stage 3: Extraction');
     const extractionOutput = await this.runExtractionPhase(successfulReports, consolidationModel, log);
 
-    // Phase 3: Critique
-    log.info('Phase 3: Critique');
+    // Stage 4: Critique
+    log.debug('Stage 4: Critique');
     const critiqueOutput = await this.runCritiquePhase(successfulReports, extractionOutput, params, consolidationModel, log);
 
-    // Phase 4: Decision
-    log.info('Phase 4: Decision');
+    // Stage 5: Decision
+    log.debug('Stage 5: Decision');
     const decisionOutput = await this.runDecisionPhase(successfulReports, critiqueOutput, consolidationModel, log);
 
-    // Phase 5: Synthesis
-    log.info('Phase 5: Synthesis');
+    // Stage 6: Synthesis
+    log.debug('Stage 6: Synthesis');
     const synthesisOutput = await this.runSynthesisPhase(successfulReports, decisionOutput, params, consolidationModel, log);
 
     const totalDurationMs = Date.now() - totalStart;
     let output = failedExperts.length > 0 ? `> ⚠️ ${failedExperts.length} expert(s) failed\n\n` : '';
+    output += `> 📝 Formatted: ${(formattingDetails.formattingSuccessRate * 100).toFixed(0)}% success (${(formattingDetails.totalFormattingTimeMs / 1000).toFixed(1)}s)\n`;
     output += `> 👑 Council: ${successfulReports.length} experts (${expertModel}) → 4-phase consolidation (${consolidationModel})\n`;
     output += `> ⏱️ ${(totalDurationMs / 1000).toFixed(1)}s | Accepted: ${decisionOutput.acceptedCount} | Rejected: ${decisionOutput.rejectedCount}\n\n---\n\n`;
     output += synthesisOutput.blueprint;
@@ -152,11 +203,12 @@ export class CouncilService {
       synthesisOutput,
       finalBlueprint: output,
       consolidationModel,
-      totalDurationMs
+      totalDurationMs,
+      formattingDetails
     };
 
-    try { 
-      this.deps.databaseService.saveCouncilResult(result, params.draftPlan, params.techStack, params.contextConstraints, correlationId); 
+    try {
+      this.deps.databaseService.saveCouncilResult(result, params.draftPlan, params.techStack, params.contextConstraints, correlationId);
     } catch (err) {
       log.warn('Failed to save to database', { error: err instanceof Error ? err.message : String(err) });
     }
@@ -166,9 +218,9 @@ export class CouncilService {
   }
 
   /**
-   * Call an expert persona and parse structured JSON output
+   * Call an expert persona for prose analysis
    */
-  private async callExpert(persona: Persona, model: string, userMessage: string, timeoutMs: number, log: Logger | CorrelatedLogger): Promise<ExpertReport> {
+  private async callExpert(persona: Persona, model: string, userMessage: string, timeoutMs: number, log: Logger | CorrelatedLogger): Promise<{ persona: Persona; prose: string; durationMs: number }> {
     const start = Date.now();
     const messages: Message[] = [
       { role: 'system', content: persona.systemPrompt },
@@ -176,36 +228,16 @@ export class CouncilService {
     ];
 
     try {
-      const rawContent = await this.deps.openRouterService.call({ 
-        model, 
-        messages, 
-        maxTokens: 4096, 
-        temperature: 0.3, 
-        timeoutMs 
+      const rawContent = await this.deps.openRouterService.call({
+        model,
+        messages,
+        maxTokens: 4096,
+        temperature: 0.3,
+        timeoutMs
       });
 
-      // Parse JSON output (strip markdown code blocks if present)
-      let jsonContent = rawContent.trim();
-      if (jsonContent.startsWith('```json')) {
-        jsonContent = jsonContent.replace(/^```json\s*/, '').replace(/\s*```$/, '');
-      } else if (jsonContent.startsWith('```')) {
-        jsonContent = jsonContent.replace(/^```\s*/, '').replace(/\s*```$/, '');
-      }
-
-      const structuredOutput = StructuredExpertOutputSchema.parse(JSON.parse(jsonContent));
-
-      const report: ExpertReport = {
-        personaId: persona.id,
-        personaName: persona.name,
-        personaEmoji: persona.emoji,
-        structuredOutput,
-        rawContent,
-        durationMs: Date.now() - start,
-        modelUsed: model
-      };
-
-      log.debug('Expert analysis complete', { personaId: persona.id, findingsCount: structuredOutput.findings.length });
-      return report;
+      log.debug('Expert prose analysis complete', { personaId: persona.id, contentLength: rawContent.length });
+      return { persona, prose: rawContent, durationMs: Date.now() - start };
     } catch (err) {
       log.error('Expert analysis failed', { personaId: persona.id, error: err instanceof Error ? err.message : String(err) });
       throw new Error(`${persona.name} failed: ${err instanceof Error ? err.message : String(err)}`);
@@ -213,12 +245,12 @@ export class CouncilService {
   }
 
   /**
-   * Phase 2: Extraction - Extract structured claims from expert reports
+   * Stage 3: Extraction - Extract structured claims from expert reports
    */
   private async runExtractionPhase(reports: ExpertReport[], model: string, log: Logger | CorrelatedLogger): Promise<ExtractionPhaseOutput> {
     const lead = this.deps.personaService.createLead('extraction');
-    
-    const expertReportsText = reports.map(r => 
+
+    const expertReportsText = reports.map(r =>
       `## ${r.personaEmoji} ${r.personaName}\n\n${JSON.stringify(r.structuredOutput, null, 2)}`
     ).join('\n\n---\n\n');
 
@@ -236,22 +268,22 @@ export class CouncilService {
     });
 
     const output = ExtractionPhaseOutputSchema.parse(JSON.parse(this.cleanJsonOutput(rawOutput)));
-    log.info('Extraction complete', { totalFindings: output.totalFindings });
+    log.debug('Extraction complete', { totalFindings: output.totalFindings });
     return output;
   }
 
   /**
-   * Phase 3: Critique - Analyze for contradictions and weaknesses
+   * Stage 4: Critique - Analyze for contradictions and weaknesses
    */
   private async runCritiquePhase(
-    reports: ExpertReport[], 
-    extraction: ExtractionPhaseOutput, 
+    reports: ExpertReport[],
+    extraction: ExtractionPhaseOutput,
     params: CouncilParams,
-    model: string, 
+    model: string,
     log: Logger | CorrelatedLogger
   ): Promise<CritiquePhaseOutput> {
     const lead = this.deps.personaService.createLead('critique');
-    
+
     const context = `## Original Draft Plan\n\n${params.draftPlan}\n\n## Extracted Claims\n\n${JSON.stringify(extraction, null, 2)}`;
 
     const messages: Message[] = [
@@ -268,24 +300,21 @@ export class CouncilService {
     });
 
     const output = CritiquePhaseOutputSchema.parse(JSON.parse(this.cleanJsonOutput(rawOutput)));
-    log.info('Critique complete', { 
-      contradictions: output.contradictions.length, 
-      unsupportedClaims: output.unsupportedClaims.length 
-    });
+    log.debug('Critique complete', { contradictions: output.contradictions.length, unsupportedClaims: output.unsupportedClaims.length });
     return output;
   }
 
   /**
-   * Phase 4: Decision - Accept/reject findings explicitly
+   * Stage 5: Decision - Accept/reject findings explicitly
    */
   private async runDecisionPhase(
-    reports: ExpertReport[], 
-    critique: CritiquePhaseOutput, 
-    model: string, 
+    reports: ExpertReport[],
+    critique: CritiquePhaseOutput,
+    model: string,
     log: Logger | CorrelatedLogger
   ): Promise<DecisionPhaseOutput> {
     const lead = this.deps.personaService.createLead('decision');
-    
+
     const allFindings = reports.flatMap(r => r.structuredOutput.findings);
     const context = `## All Findings\n\n${JSON.stringify(allFindings, null, 2)}\n\n## Critique Analysis\n\n${JSON.stringify(critique, null, 2)}`;
 
@@ -303,23 +332,22 @@ export class CouncilService {
     });
 
     const output = DecisionPhaseOutputSchema.parse(JSON.parse(this.cleanJsonOutput(rawOutput)));
-    log.info('Decision complete', { accepted: output.acceptedCount, rejected: output.rejectedCount });
+    log.debug('Decision complete', { accepted: output.acceptedCount, rejected: output.rejectedCount });
     return output;
   }
 
   /**
-   * Phase 5: Synthesis - Assemble final blueprint from accepted findings
+   * Stage 6: Synthesis - Assemble final blueprint from accepted findings
    */
   private async runSynthesisPhase(
-    reports: ExpertReport[], 
-    decision: DecisionPhaseOutput, 
+    reports: ExpertReport[],
+    decision: DecisionPhaseOutput,
     params: CouncilParams,
-    model: string, 
+    model: string,
     log: Logger | CorrelatedLogger
   ): Promise<SynthesisPhaseOutput> {
     const lead = this.deps.personaService.createLead('synthesis');
-    
-    // Collect accepted findings
+
     const acceptedFindingIds = new Set(
       decision.decisions.filter(d => d.action === 'ACCEPT').map(d => d.findingId)
     );
@@ -351,7 +379,7 @@ export class CouncilService {
       timeoutMs: this.deps.config.timeouts.leadMs
     });
 
-    log.info('Synthesis complete', { acceptedFindings: acceptedFindings.length });
+    log.debug('Synthesis complete', { acceptedFindings: acceptedFindings.length });
     return { blueprint, acceptedFindings, attributions };
   }
 

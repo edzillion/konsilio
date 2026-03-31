@@ -90,14 +90,19 @@ interface KonsilioConfig {
   models?: {
     experts?: string;
     lead?: string;
+    formatter?: string;
   };
   timeouts?: {
     expertMs?: number;
     leadMs?: number;
+    formatterMs?: number;
   };
   maxDraftPlanLength?: number;
   maxHistorySessions?: number;
   databasePath?: string;
+  formatter?: {
+    maxRetries?: number;
+  };
 }
 
 function loadKonsilioConfig(): KonsilioConfig {
@@ -143,13 +148,18 @@ export const config = {
   models: {
     experts: env("EXPERT_MODEL") ?? konsilioConfig.models?.experts ?? "google/gemini-2.5-flash-lite",
     lead: env("LEAD_MODEL") ?? konsilioConfig.models?.lead ?? "google/gemini-2.5-pro",
+    formatter: env("FORMATTER_MODEL") ?? konsilioConfig.models?.formatter ?? "openai/gpt-4o-mini",
   },
 
   // Timeout Configuration
   timeouts: {
     expertMs: konsilioConfig.timeouts?.expertMs ?? 90_000,
     leadMs: konsilioConfig.timeouts?.leadMs ?? 120_000,
+    formatterMs: konsilioConfig.timeouts?.formatterMs ?? 30_000,
   },
+
+  // Formatter retries
+  formatterMaxRetries: konsilioConfig.formatter?.maxRetries ?? 3,
 
   // Limits
   maxDraftPlanLength: konsilioConfig.maxDraftPlanLength ?? parsePositiveInt(env("DRAFT_PLAN_MAX_LENGTH"), 12000),

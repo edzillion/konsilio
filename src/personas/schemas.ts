@@ -129,6 +129,25 @@ export interface CouncilResult {
   finalBlueprint: string;
   consolidationModel: string;
   totalDurationMs: number;
+  formattingDetails?: {
+    totalFormattingTimeMs: number;
+    formattingSuccessRate: number;
+    formattingErrors: string[];
+  };
+}
+
+// ─── Two-Stage Consulting Types ───
+
+export interface ProseExpertOutput {
+  personaId: string;
+  analysis: string;
+  confidence: number;
+  keyInsights: string[];
+}
+
+export interface FormattedExpertOutput extends StructuredExpertOutput {
+  formattingConfidence: number;
+  originalProse: string;
 }
 
 // ─── Inferred Types (replaces all interfaces) ───
