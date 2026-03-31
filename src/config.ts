@@ -75,9 +75,8 @@ interface KonsilioConfig {
 }
 
 function loadKonsilioConfig(): KonsilioConfig {
-  const projectRoot = process.env.PROJECT_ROOT ?? process.cwd();
+  // Resolve relative to this file's location (works in both src/ and build/)
   const candidates = [
-    resolve(projectRoot, "konsilio.json"),
     resolve(__dirname, "..", "konsilio.json"),
   ];
   

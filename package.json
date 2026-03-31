@@ -7,7 +7,7 @@
     "konsilio": "build/index.js"
   },
   "scripts": {
-    "build": "tsc",
+    "build": "tsc && node -e \"require('fs').cpSync('src/prompts','build/prompts',{recursive:true});require('fs').cpSync('konsilio.json','build/konsilio.json')\"",
     "dev": "tsc --watch",
     "start": "node build/index.js",
     "start:server": "node build/server.js",
