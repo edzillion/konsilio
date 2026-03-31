@@ -11,7 +11,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { CouncilService, type CouncilConfig } from '../council.service.js';
 import type { Logger } from '../../logger.js';
-import type { Persona, StructuredExpertOutput, ExtractionPhaseOutput, CritiquePhaseOutput, DecisionPhaseOutput } from '../../personas/types.js';
+import type { Persona, StructuredExpertOutput, ExtractionPhaseOutput, CritiquePhaseOutput, DecisionPhaseOutput } from '../../personas/schemas.js';
 
 // ─── Helpers ───
 

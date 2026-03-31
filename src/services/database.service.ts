@@ -9,7 +9,7 @@ import Database from 'better-sqlite3';
 import { mkdirSync } from 'node:fs';
 import { dirname } from 'node:path';
 import type { Logger } from '../logger.js';
-import type { CouncilResult } from '../personas/types.js';
+import type { CouncilResult } from '../personas/schemas.js';
 
 export interface DatabaseServiceConfig {
   dbPath: string;
