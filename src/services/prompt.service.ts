@@ -31,7 +31,9 @@ export class PromptService {
   private readonly logger: Logger;
 
   constructor(config: PromptServiceConfig | undefined, logger: Logger) {
-    this.promptsDir = config?.promptsDir ?? join(process.cwd(), 'src', 'prompts');
+    // Use PROJECT_ROOT env var to resolve paths correctly regardless of CWD
+    const projectRoot = process.env.PROJECT_ROOT ?? process.cwd();
+    this.promptsDir = config?.promptsDir ?? join(projectRoot, 'src', 'prompts');
     this.logger = logger;
   }
 

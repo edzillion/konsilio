@@ -9,6 +9,33 @@
  * Uses correlation IDs for request tracing and structured JSON logging.
  */
 
+// ─── Load .env for local development ─────────────────────────────────────────
+// This is the ONLY place .env is loaded. For MCP server usage, env vars must
+// be set by the host process. This keeps the package self-contained when
+// published to npm.
+import { readFileSync, existsSync } from 'node:fs';
+import { resolve, dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const projectRoot = process.env.PROJECT_ROOT ?? resolve(__dirname, '..');
+const envPath = resolve(projectRoot, '.env');
+if (existsSync(envPath)) {
+  const content = readFileSync(envPath, 'utf-8');
+  for (const line of content.split('\n')) {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith('#')) continue;
+    const eqIdx = trimmed.indexOf('=');
+    if (eqIdx === -1) continue;
+    const key = trimmed.slice(0, eqIdx).trim();
+    let value = trimmed.slice(eqIdx + 1).trim();
+    if ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'"))) {
+      value = value.slice(1, -1);
+    }
+    if (!process.env[key]) process.env[key] = value;
+  }
+}
+
 import { createServer, IncomingMessage, ServerResponse } from 'node:http';
 import { randomUUID } from 'node:crypto';
 import { LogWriter, Logger, createLogger } from './logger.js';
