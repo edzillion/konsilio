@@ -11,7 +11,7 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { Logger } from '../../logger.js';
-import type { CouncilResult } from '../../personas/types.js';
+import type { CouncilResult } from '../../personas/schemas.js';
 
 // ─── Mock node:fs ───
 vi.mock('node:fs', () => ({

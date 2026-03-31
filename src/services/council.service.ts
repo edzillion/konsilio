@@ -11,6 +11,13 @@
 
 import { randomUUID } from 'node:crypto';
 import type { Logger, CorrelatedLogger } from '../logger.js';
+import { 
+  StructuredExpertOutputSchema,
+  ExtractionPhaseOutputSchema,
+  CritiquePhaseOutputSchema,
+  DecisionPhaseOutputSchema,
+  SynthesisPhaseOutputSchema
+} from '../personas/schemas.js';
 import type { 
   Persona, 
   ExpertReport, 
@@ -21,7 +28,7 @@ import type {
   DecisionPhaseOutput,
   SynthesisPhaseOutput,
   StructuredFinding
-} from '../personas/types.js';
+} from '../personas/schemas.js';
 import type { OpenRouterService, Message } from './openrouter.service.js';
 import type { DatabaseService } from './database.service.js';
 import type { CacheService } from './cache.service.js';
@@ -185,12 +192,7 @@ export class CouncilService {
         jsonContent = jsonContent.replace(/^```\s*/, '').replace(/\s*```$/, '');
       }
 
-      const structuredOutput: StructuredExpertOutput = JSON.parse(jsonContent);
-
-      // Validate structure
-      if (!structuredOutput.personaId || !Array.isArray(structuredOutput.findings)) {
-        throw new Error('Invalid structured output: missing personaId or findings array');
-      }
+      const structuredOutput = StructuredExpertOutputSchema.parse(JSON.parse(jsonContent));
 
       const report: ExpertReport = {
         personaId: persona.id,
@@ -233,7 +235,7 @@ export class CouncilService {
       timeoutMs: this.deps.config.timeouts.leadMs
     });
 
-    const output: ExtractionPhaseOutput = JSON.parse(this.cleanJsonOutput(rawOutput));
+    const output = ExtractionPhaseOutputSchema.parse(JSON.parse(this.cleanJsonOutput(rawOutput)));
     log.info('Extraction complete', { totalFindings: output.totalFindings });
     return output;
   }
@@ -265,7 +267,7 @@ export class CouncilService {
       timeoutMs: this.deps.config.timeouts.leadMs
     });
 
-    const output: CritiquePhaseOutput = JSON.parse(this.cleanJsonOutput(rawOutput));
+    const output = CritiquePhaseOutputSchema.parse(JSON.parse(this.cleanJsonOutput(rawOutput)));
     log.info('Critique complete', { 
       contradictions: output.contradictions.length, 
       unsupportedClaims: output.unsupportedClaims.length 
@@ -300,7 +302,7 @@ export class CouncilService {
       timeoutMs: this.deps.config.timeouts.leadMs
     });
 
-    const output: DecisionPhaseOutput = JSON.parse(this.cleanJsonOutput(rawOutput));
+    const output = DecisionPhaseOutputSchema.parse(JSON.parse(this.cleanJsonOutput(rawOutput)));
     log.info('Decision complete', { accepted: output.acceptedCount, rejected: output.rejectedCount });
     return output;
   }
