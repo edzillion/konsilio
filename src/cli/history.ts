@@ -4,7 +4,7 @@ import Database from "better-sqlite3";
 import { existsSync } from "node:fs";
 import { resolve } from "node:path";
 
-const DB_PATH = resolve(process.cwd(), "data/council.db");
+const DB_PATH = resolve(process.cwd(), "data/konsilio.db");
 
 interface Session {
   id: string;
@@ -12,19 +12,22 @@ interface Session {
   draft_plan_summary: string | null;
   tech_stack: string | null;
   constraints: string | null;
-  debate_mode: number;
 }
 
-interface ExpertReport {
-  id: number;
+interface ExpertFinding {
+  id: string;
   session_id: string;
   persona_id: string;
   persona_name: string;
   persona_emoji: string | null;
-  content: string;
+  severity: string;
+  component: string;
+  issue: string;
+  mitigation: string;
+  accepted: number;
+  rejection_reason: string | null;
   duration_ms: number | null;
   model_used: string | null;
-  is_debate: number;
 }
 
 interface Message {
@@ -43,7 +46,7 @@ function getDatabase(): Database.Database | null {
 
 function listSessions(db: Database.Database, limit: number = 10): void {
   const sessions = db.prepare(`
-    SELECT id, created_at, draft_plan_summary, tech_stack, debate_mode
+    SELECT id, created_at, draft_plan_summary, tech_stack
     FROM sessions
     ORDER BY created_at DESC
     LIMIT ?
@@ -62,18 +65,17 @@ function listSessions(db: Database.Database, limit: number = 10): void {
     const id = s.id.slice(0, 8);
     const date = new Date(s.created_at).toLocaleString();
     const summary = s.draft_plan_summary?.slice(0, 50) ?? "No summary";
-    const debate = s.debate_mode ? " | 🗣️ debate" : "";
     
     // Get expert count and total time
     const stats = db.prepare(`
       SELECT COUNT(*) as count, SUM(duration_ms) as total_ms
-      FROM expert_reports
-      WHERE session_id = ? AND is_debate = 0
+      FROM expert_findings
+      WHERE session_id = ?
     `).get(s.id) as { count: number; total_ms: number | null };
     
     const totalSec = stats.total_ms ? (stats.total_ms / 1000).toFixed(1) : "?";
     
-    console.log(`│ ${id}… | ${date} | ${stats.count} experts | ${totalSec}s${debate}`);
+    console.log(`│ ${id}… | ${date} | ${stats.count} experts | ${totalSec}s`);
     console.log(`│   Plan: ${summary}…`);
     if (s.tech_stack) {
       console.log(`│   Stack: ${s.tech_stack}`);
@@ -104,7 +106,6 @@ function showSession(db: Database.Database, sessionId: string): void {
   console.log(`│ 📋 Session: ${session.id}           │`);
   console.log("├──────────────────────────────────────────────────────────────┤");
   console.log(`│ 📅 ${date}`);
-  console.log(`│ 🗣️ Debate mode: ${session.debate_mode ? "Yes" : "No"}`);
   if (session.tech_stack) {
     console.log(`│ 🔧 Stack: ${session.tech_stack}`);
   }
@@ -128,67 +129,51 @@ function showSession(db: Database.Database, sessionId: string): void {
     }
   }
 
-  // Get expert reports
-  const reports = db.prepare(`
-    SELECT * FROM expert_reports
-    WHERE session_id = ? AND is_debate = 0
-    ORDER BY created_at ASC
-  `).all(fullId) as ExpertReport[];
+  // Get expert findings grouped by persona
+  const findings = db.prepare(`
+    SELECT * FROM expert_findings
+    WHERE session_id = ?
+    ORDER BY persona_id, severity
+  `).all(fullId) as ExpertFinding[];
 
   console.log("├──────────────────────────────────────────────────────────────┤");
-  console.log("│ 🧠 Expert Analysis:");
+  console.log("│ 🧠 Expert Findings:");
   console.log("│");
 
-  for (const r of reports) {
-    const emoji = r.persona_emoji ?? "👤";
-    const duration = r.duration_ms ? `${(r.duration_ms / 1000).toFixed(1)}s` : "?";
-    const model = r.model_used?.split("/").pop() ?? "?";
+  // Group by persona
+  const byPersona = new Map<string, ExpertFinding[]>();
+  for (const f of findings) {
+    const existing = byPersona.get(f.persona_id) ?? [];
+    existing.push(f);
+    byPersona.set(f.persona_id, existing);
+  }
+
+  for (const [personaId, personaFindings] of byPersona) {
+    const emoji = personaFindings[0]?.persona_emoji ?? "👤";
+    const name = personaFindings[0]?.persona_name ?? personaId;
     
-    console.log(`│ ${emoji} ${r.persona_name} (${duration}, ${model})`);
+    console.log(`│ ${emoji} ${name}`);
     console.log("│ ───────────────────────────────────────────");
     
-    for (const line of r.content.split("\n")) {
-      console.log(`│   ${line}`);
+    for (const f of personaFindings) {
+      const status = f.accepted ? "✅" : "❌";
+      console.log(`│   ${status} [${f.severity}] ${f.component}`);
+      console.log(`│      Issue: ${f.issue.slice(0, 60)}${f.issue.length > 60 ? "…" : ""}`);
+      console.log(`│      Fix: ${f.mitigation.slice(0, 60)}${f.mitigation.length > 60 ? "…" : ""}`);
     }
     console.log("│");
   }
 
-  // Debate reports if any
-  const debateReports = db.prepare(`
-    SELECT * FROM expert_reports
-    WHERE session_id = ? AND is_debate = 1
-    ORDER BY created_at ASC
-  `).all(fullId) as ExpertReport[];
-
-  if (debateReports.length > 0) {
-    console.log("├──────────────────────────────────────────────────────────────┤");
-    console.log("│ 🗣️ Debate Round:");
-    console.log("│");
-
-    for (const r of debateReports) {
-      const emoji = r.persona_emoji ?? "👤";
-      const duration = r.duration_ms ? `${(r.duration_ms / 1000).toFixed(1)}s` : "?";
-      
-      console.log(`│ ${emoji} ${r.persona_name} (${duration})`);
-      console.log("│ ───────────────────────────────────────────");
-      
-      for (const line of r.content.split("\n")) {
-        console.log(`│   ${line}`);
-      }
-      console.log("│");
-    }
-  }
-
-  // Final blueprint
+  // Final blueprint (from consolidation phase)
   const blueprint = db.prepare(`
     SELECT content FROM messages
-    WHERE session_id = ? AND role = 'assistant' AND persona_id = 'lead'
+    WHERE session_id = ? AND role = 'assistant' AND persona_id = 'consolidation'
     ORDER BY created_at DESC LIMIT 1
   `).get(fullId) as { content: string } | undefined;
 
   if (blueprint) {
     console.log("├──────────────────────────────────────────────────────────────┤");
-    console.log("│ 👑 Lead Architect Blueprint:");
+    console.log("│ 👑 Council Blueprint:");
     console.log("│");
     
     for (const line of blueprint.content.split("\n")) {
@@ -204,7 +189,7 @@ const args = process.argv.slice(2);
 const db = getDatabase();
 
 if (!db) {
-  console.log("❌ No database found at ./data/council.db");
+  console.log("❌ No database found at ./data/konsilio.db");
   console.log("   Run a council session first to create data.");
   process.exit(1);
 }

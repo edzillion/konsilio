@@ -90,12 +90,10 @@ interface KonsilioConfig {
   models?: {
     experts?: string;
     lead?: string;
-    debate?: string;
   };
   timeouts?: {
     expertMs?: number;
     leadMs?: number;
-    debateMs?: number;
   };
   maxDraftPlanLength?: number;
   maxHistorySessions?: number;
@@ -139,20 +137,18 @@ export const config = {
   isDevelopment: parseNodeEnv(env("NODE_ENV")) === "development",
 
   // Enabled persona IDs from config file (defaults to all if not specified)
-  enabledPersonas: konsilioConfig.personas?.enabled ?? ["security", "performance", "ux-dx", "devops"],
+  enabledPersonas: konsilioConfig.personas?.enabled,
 
   // Model Configuration
   models: {
     experts: env("EXPERT_MODEL") ?? konsilioConfig.models?.experts ?? "google/gemini-2.5-flash-lite",
     lead: env("LEAD_MODEL") ?? konsilioConfig.models?.lead ?? "google/gemini-2.5-pro",
-    debate: env("DEBATE_MODEL") ?? konsilioConfig.models?.debate ?? "google/gemini-2.5-flash-lite",
   },
 
   // Timeout Configuration
   timeouts: {
     expertMs: konsilioConfig.timeouts?.expertMs ?? 90_000,
     leadMs: konsilioConfig.timeouts?.leadMs ?? 120_000,
-    debateMs: konsilioConfig.timeouts?.debateMs ?? 60_000,
   },
 
   // Limits
@@ -161,7 +157,7 @@ export const config = {
   maxParallelExperts: 4,
 
   // Database & Caching
-  databasePath: konsilioConfig.databasePath ?? env("DATABASE_PATH", "./data/council.db") ?? "./data/council.db",
+  databasePath: konsilioConfig.databasePath ?? env("DATABASE_PATH", "./data/konsilio.db") ?? "./data/konsilio.db",
   cacheTtlSeconds: parsePositiveInt(env("CACHE_TTL_SECONDS"), 3600),
 } as const;
 
@@ -169,13 +165,21 @@ export const config = {
 
 /**
  * Validates that required configuration is present.
- * Throws an error if OPENROUTER_API_KEY is not set.
+ * Throws an error if required config is missing.
  */
 export function validateConfig(): void {
   if (!config.openrouterApiKey) {
     throw new Error(
       "Missing OPENROUTER_API_KEY. Set it in your .env file or via OPENROUTER_API_KEY environment variable.\n" +
       "Get your key at https://openrouter.ai/keys"
+    );
+  }
+
+  if (!config.enabledPersonas || config.enabledPersonas.length === 0) {
+    throw new Error(
+      "Missing enabled personas in konsilio.json. " +
+      "Add a 'personas.enabled' array with valid persona IDs. " +
+      "Available: security, performance, ux-dx, devops, typescript, graph-dba, node-fullstack, dev-tooling, distributed-systems, test-architect"
     );
   }
 }
