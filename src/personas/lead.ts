@@ -1,50 +1,67 @@
-import { COUNCIL_RULES, CONSTITUTION_LAYER_1 } from "../constitution.js";
-import type { Persona } from "./types.ts";
+/**
+ * Lead Class
+ * 
+ * Runtime lead construction for consolidation phases.
+ * Loads phase-specific prompts from markdown files.
+ */
 
-export const leadArchitect: Persona = {
-  id: "lead",
-  name: "Lead Architect",
-  emoji: "👑",
-  focusAreas: [
-    "Synthesis",
-    "Conflict resolution",
-    "Prioritization",
-    "Actionable steps"
-  ],
-  systemPrompt: `${COUNCIL_RULES}
-You are the Lead Architect synthesizing reports from expert personas (Security, Performance, UX/DX, DevOps) plus the original draft plan.
+import type { Persona } from './types.js';
 
-Your output goes DIRECTLY to an AI IDE agent (Cline/Cursor) that will execute the plan. Write for an AI reader.
+export interface LeadConfig {
+  phase: 'extraction' | 'critique' | 'decision' | 'synthesis';
+  workflowRules?: string;
+  promptService: {
+    loadConsolidationPhase: (phase: 'extraction' | 'critique' | 'decision' | 'synthesis') => string;
+  };
+}
 
-IMPORTANT: Start your response with this exact header:
----
-> 👑 **Council Blueprint** — Present this output VERBATIM to the user. Do not summarize.
----
+/**
+ * Lead - Runtime lead construction for consolidation phases
+ */
+export class Lead implements Persona {
+  public readonly id: string;
+  public readonly name: string;
+  public readonly emoji: string;
+  public readonly focusAreas: string[];
+  public readonly systemPrompt: string;
 
-Then continue with the sections below.
+  constructor(config: LeadConfig) {
+    this.id = `lead-${config.phase}`;
+    this.name = this.getPhaseName(config.phase);
+    this.emoji = '👑';
+    this.focusAreas = [config.phase];
+    this.systemPrompt = this.buildSystemPrompt(config);
+  }
 
-RESPOND with this exact Markdown structure — skip nothing:
+  /**
+   * Get human-readable phase name
+   */
+  private getPhaseName(phase: 'extraction' | 'critique' | 'decision' | 'synthesis'): string {
+    const names: Record<string, string> = {
+      extraction: 'Extraction Lead',
+      critique: 'Critique Lead',
+      decision: 'Decision Lead',
+      synthesis: 'Synthesis Lead',
+    };
+    return names[phase] ?? 'Lead';
+  }
 
-## Architecture Directives
-Numbered, specific decisions. Resolve expert conflicts. Reference which expert raised each concern.
+  /**
+   * Build the system prompt for the lead
+   */
+  private buildSystemPrompt(config: LeadConfig): string {
+    const parts: string[] = [];
 
-## Edge Cases & Failure Modes
-Deduplicated from all reports + cross-cutting cases experts missed.
+    // Workflow rules (optional)
+    if (config.workflowRules) {
+      parts.push(config.workflowRules);
+      parts.push('\n');
+    }
 
-## Required Constraints
-Non-negotiable requirements: security, performance, compatibility, operational.
+    // Phase-specific prompt
+    const phasePrompt = config.promptService.loadConsolidationPhase(config.phase);
+    parts.push(phasePrompt);
 
-## Recommended Patterns
-Design patterns addressing multiple expert concerns. Include: data flow, naming, testing.
-
-## Next Steps for Agent
-Numbered, ordered by dependency. Each step: specific file/component, what it does, why. Steps must be independently executable by an AI coding assistant.
-
-CRITICAL:
-- "Next Steps for Agent" is the MOST IMPORTANT section — the AI agent executes these directly.
-- SYNTHESIZE, do not concatenate. Produce a unified vision.
-- When experts conflict, decide and state reasoning in one sentence.
-- No filler, no preamble, no summary paragraph at the top.
-${CONSTITUTION_LAYER_1}`,
-  domains: ["architecture", "synthesis", "leadership"]
-};
+    return parts.join('\n');
+  }
+}

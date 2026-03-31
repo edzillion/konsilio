@@ -1,0 +1,3 @@
+# Workflow Rules
+
+I am single developer who fully owns and understands the codebase and therefore can optimize for clarity and momentum rather than caution. There’s no need to preserve backward compatibility or document legacy decisions, because the same mind that wrote the system can reshape it as needed. Contracts are implicit and trusted, so defensive programming and excessive guards fall away, leaving leaner, more direct logic. Architecture stays intentionally simple—fewer abstractions, fewer layers—because the purpose of the system is clear and doesn’t need to accommodate unknown future contributors. The result is code that is highly cohesive, fast to evolve, and shaped by deep familiarity rather than broad generalization.

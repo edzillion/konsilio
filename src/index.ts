@@ -4,9 +4,7 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
 import { config } from "./config.js";
-import { runCouncil } from "./council.js";
-import { allPersonas } from "./personas/index.js";
-import * as db from "./db/index.js";
+import { getServices } from "./container.js";
 
 const server = new McpServer({
   name: "konsilio",
@@ -26,11 +24,16 @@ Returns a structured blueprint with:
 - Architecture Directives (specific decisions)
 - Edge Cases & Failure Modes
 - Required Constraints
-- Recommended Patterns
 - Next Steps for Agent (numbered, executable actions)
 
-The council consists of 4 expert personas (Security, Performance, UX/DX, DevOps)
-who analyze in parallel, then a Lead Architect synthesizes their findings.`,
+The council uses a 4-phase consolidation pipeline:
+1. Expert Analysis (parallel, structured JSON output from enabled personas)
+2. Extraction (extract claims from expert reports)
+3. Critique (identify contradictions and weaknesses)
+4. Decision (accept/reject findings)
+5. Synthesis (assemble final blueprint)
+
+Use 'list_personas' to see all available personas. Enable personas in konsilio.json.`,
   {
     draft_plan: z.string().describe(
       "The architecture plan or design to analyze."
@@ -40,9 +43,6 @@ who analyze in parallel, then a Lead Architect synthesizes their findings.`,
     ),
     context_constraints: z.string().optional().describe(
       "Runtime constraints, e.g. 'Must run on Proxmox LXC', 'No external deps'"
-    ),
-    debate_mode: z.boolean().optional().default(false).describe(
-      "Experts critique each other before synthesis. Slower but more thorough."
     ),
   },
   async (params) => {
@@ -66,21 +66,14 @@ who analyze in parallel, then a Lead Architect synthesizes their findings.`,
     }
 
     try {
-      const result = await runCouncil(
+      const services = getServices();
+      const result = await services.councilService.run(
         {
           draftPlan,
           techStack: params.tech_stack,
           contextConstraints: params.context_constraints,
-        },
-        { debateMode: params.debate_mode }
+        }
       );
-
-      // Save to database (non-blocking, failures are silent)
-      try {
-        db.saveCouncilResult(result, draftPlan, params.tech_stack, params.context_constraints);
-      } catch {
-        // Persistence failure is non-fatal
-      }
 
       return {
         content: [{ type: "text" as const, text: result.finalBlueprint }],
@@ -104,7 +97,8 @@ server.tool(
     limit: z.number().min(1).max(50).default(10).describe("Number of sessions to retrieve"),
   },
   async (params) => {
-    const sessions = db.getRecentSessions(params.limit);
+    const services = getServices();
+    const sessions = services.databaseService.getRecentSessions(params.limit);
     if (sessions.length === 0) {
       return { content: [{ type: "text" as const, text: "No previous sessions found." }] };
     }
@@ -113,7 +107,6 @@ server.tool(
     for (const s of sessions) {
       output += `## ${s.id.slice(0, 8)}… (${s.created_at})\n`;
       if (s.tech_stack) output += `**Stack**: ${s.tech_stack}\n`;
-      if (s.debate_mode) output += `**Debate**: Yes\n`;
       if (s.draft_plan_summary) output += `**Plan**: ${s.draft_plan_summary}…\n`;
       output += "\n";
     }
@@ -128,6 +121,9 @@ server.tool(
   "List all expert personas in the council.",
   {},
   async () => {
+    const services = getServices();
+    const personaIds = services.personaService.getAvailablePersonaIds();
+    const allPersonas = services.personaService.createExperts(personaIds, 'default');
     let output = "# Council Personas\n\n";
     for (const p of allPersonas) {
       output += `## ${p.emoji} ${p.name}\n`;

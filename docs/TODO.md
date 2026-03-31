@@ -1,0 +1,2 @@
+- [x] Turn shared-prompts.ts into a service
+- [ ] Implement vitest unit testing 
