@@ -151,7 +151,7 @@ export class PromptService {
     focusAreas: string[];
     domains?: string[];
   } {
-    const match = content.match(/^---\n([\s\S]*?)\n---\n/);
+    const match = content.match(/^---\r?\n([\s\S]*?)\r?\n---\r?\n/);
     
     if (!match) {
       this.logger.warn('No YAML frontmatter found in persona markdown file');
@@ -168,7 +168,7 @@ export class PromptService {
     };
     
     // Simple YAML parsing for our specific format
-    const lines = yaml.split('\n');
+    const lines = yaml.split(/\r?\n/);
     let currentKey = '';
     let currentArray: string[] = [];
     
@@ -226,12 +226,12 @@ export class PromptService {
    */
   private extractAntiPatterns(content: string): string[] {
     // Find the Anti-Patterns section and extract list items
-    const match = content.match(/## Anti-Patterns\n\n([\s\S]*?)(?=\n## |$)/);
+    const match = content.match(/## Anti-Patterns\r?\n\r?\n([\s\S]*?)(?=\r?\n## |$)/);
     
     if (!match) return [];
     
     return match[1]
-      .split('\n')
+      .split(/\r?\n/)
       .filter(line => line.startsWith('- '))
       .map(line => line.slice(2).trim());
   }
