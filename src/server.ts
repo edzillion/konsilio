@@ -191,15 +191,15 @@ function readBody(req: IncomingMessage): Promise<string> {
 
 // ─── Main Entry Point ───
 
-export function main(): void {
+export async function main(): Promise<void> {
   // Validate configuration
   validateConfig();
 
   // Create logger
   const logger = createLogger(config.logLevel);
 
-  // Get services from container
-  const services = getServices();
+  // Get services from container (async due to WASM loading)
+  const services = await getServices();
 
   // Create HTTP server
   const server = createHttpServer(services, logger);
