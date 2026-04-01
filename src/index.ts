@@ -5,10 +5,11 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import { z } from "zod";
 import { config } from "./config.js";
 import { getServices } from "./container.js";
+import pkg from "../package.json" with { type: "json" };
 
 const server = new McpServer({
   name: "konsilio",
-  version: "0.1.0",
+  version: pkg.version,
 });
 
 // ─── Primary Tool ───
