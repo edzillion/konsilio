@@ -1,15 +1,15 @@
 /**
  * Database Service
  * 
- * Provides SQLite database operations for session persistence.
+ * Provides SQLite database operations for session persistence using sql.js (WASM).
  * Designed for dependency injection to enable testing.
  */
 
-import Database from 'better-sqlite3';
-import { mkdirSync } from 'node:fs';
+import initSqlJs, { type Database } from 'sql.js';
+import { mkdirSync, readFileSync, writeFileSync, existsSync } from 'node:fs';
 import { dirname } from 'node:path';
 import type { Logger } from '../logger.js';
-import type { CouncilResult } from '../personas/types.js';
+import type { CouncilResult } from '../personas/schemas.js';
 
 export interface DatabaseServiceConfig {
   dbPath: string;
@@ -24,31 +24,56 @@ export interface SessionSummary {
 }
 
 /**
- * DatabaseService - Handles SQLite persistence
+ * DatabaseService - Handles SQLite persistence via sql.js (WASM)
+ * 
+ * Uses an in-memory database that is loaded from / saved to disk.
+ * All queries run against the in-memory copy; changes are persisted
+ * explicitly after writes.
  */
 export class DatabaseService {
-  private db: Database.Database | null = null;
+  private db: Database | null = null;
   private readonly dbPath: string;
   private readonly maxHistorySessions: number;
   private readonly logger: Logger;
 
-  constructor(config: DatabaseServiceConfig, logger: Logger, schema: string) {
+  private constructor(config: DatabaseServiceConfig, logger: Logger) {
     this.dbPath = config.dbPath;
     this.maxHistorySessions = config.maxHistorySessions ?? 10;
     this.logger = logger;
-    this.initialize(schema);
   }
 
   /**
-   * Initialize database connection
+   * Factory method to create and initialize the DatabaseService.
+   * Async because sql.js WASM loading and DB file reading are async.
    */
-  private initialize(schema: string): void {
+  static async create(config: DatabaseServiceConfig, logger: Logger, schema: string): Promise<DatabaseService> {
+    const service = new DatabaseService(config, logger);
+    await service.initialize(schema);
+    return service;
+  }
+
+  /**
+   * Initialize database: load WASM, read existing DB file (or create new), apply schema
+   */
+  private async initialize(schema: string): Promise<void> {
     try {
+      // In Node.js, sql.js auto-locates the WASM file from node_modules.
+      // No locateFile needed - per sql.js docs: "You can omit locateFile completely when running in node"
+      const SQL = await initSqlJs();
+
       mkdirSync(dirname(this.dbPath), { recursive: true });
-      this.db = new Database(this.dbPath);
-      this.db.pragma('journal_mode = WAL');
-      this.db.pragma('foreign_keys = ON');
-      this.db.exec(schema);
+
+      if (existsSync(this.dbPath)) {
+        const buffer = readFileSync(this.dbPath);
+        this.db = new SQL.Database(buffer);
+      } else {
+        this.db = new SQL.Database();
+      }
+
+      // Apply schema (idempotent — uses IF NOT EXISTS)
+      this.db.run(schema);
+      this.save();
+
       this.logger.info('Database service initialized', { path: this.dbPath });
     } catch (err) {
       this.logger.error('Failed to initialize database service', {
@@ -57,6 +82,16 @@ export class DatabaseService {
       });
       throw err;
     }
+  }
+
+  /**
+   * Persist the in-memory database to disk
+   */
+  private save(): void {
+    if (!this.db) return;
+    const data = this.db.export();
+    const buffer = Buffer.from(data);
+    writeFileSync(this.dbPath, buffer);
   }
 
   /**
@@ -70,7 +105,7 @@ export class DatabaseService {
     }
 
     try {
-      this.db.prepare('SELECT 1').get();
+      this.db.exec('SELECT 1');
       return { status: 'healthy', latencyMs: Date.now() - start };
     } catch (err) {
       return { status: 'unhealthy', latencyMs: Date.now() - start, error: err instanceof Error ? err.message : String(err) };
@@ -93,38 +128,32 @@ export class DatabaseService {
     }
 
     try {
-      const tx = this.db.transaction(() => {
-        // Save session
-        this.db!.prepare(`
-          INSERT INTO sessions (id, draft_plan_summary, tech_stack, constraints)
-          VALUES (?, ?, ?, ?)
-        `).run(
-          result.sessionId,
-          draftPlan.slice(0, 500),
-          techStack ?? null,
-          constraints ?? null
-        );
+      // Save session
+      this.db.run(
+        `INSERT INTO sessions (id, draft_plan_summary, tech_stack, constraints) VALUES (?, ?, ?, ?)`,
+        [result.sessionId, draftPlan.slice(0, 500), techStack ?? null, constraints ?? null]
+      );
 
-        // Save user message
-        this.db!.prepare(`
-          INSERT INTO messages (session_id, role, content)
-          VALUES (?, 'user', ?)
-        `).run(result.sessionId, draftPlan);
+      // Save user message
+      this.db.run(
+        `INSERT INTO messages (session_id, role, content) VALUES (?, 'user', ?)`,
+        [result.sessionId, draftPlan]
+      );
 
-        // Save expert findings
-        for (const report of result.expertReports) {
-          for (const finding of report.structuredOutput.findings) {
-            const decision = result.decisionOutput.decisions.find(d => d.findingId === finding.id);
-            const accepted = decision?.action === 'ACCEPT' ? 1 : 0;
-            const rejectionReason = decision?.action === 'REJECT' ? decision.reasoning : null;
+      // Save expert findings
+      for (const report of result.expertReports) {
+        for (const finding of report.structuredOutput.findings) {
+          const decision = result.decisionOutput.decisions.find(d => d.findingId === finding.id);
+          const accepted = decision?.action === 'ACCEPT' ? 1 : 0;
+          const rejectionReason = decision?.action === 'REJECT' ? decision.reasoning : null;
 
-            this.db!.prepare(`
-              INSERT INTO expert_findings (
-                id, session_id, persona_id, persona_name, persona_emoji,
-                severity, component, issue, mitigation, accepted, rejection_reason,
-                duration_ms, model_used
-              ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            `).run(
+          this.db.run(
+            `INSERT INTO expert_findings (
+              id, session_id, persona_id, persona_name, persona_emoji,
+              severity, component, issue, mitigation, accepted, rejection_reason,
+              duration_ms, model_used
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            [
               finding.id,
               result.sessionId,
               report.personaId,
@@ -138,16 +167,17 @@ export class DatabaseService {
               rejectionReason,
               report.durationMs,
               report.modelUsed
-            );
-          }
+            ]
+          );
+        }
 
-          // Save expert risks
-          for (const risk of report.structuredOutput.risks) {
-            this.db!.prepare(`
-              INSERT INTO expert_risks (
-                id, session_id, persona_id, category, probability, impact, description
-              ) VALUES (?, ?, ?, ?, ?, ?, ?)
-            `).run(
+        // Save expert risks
+        for (const risk of report.structuredOutput.risks) {
+          this.db.run(
+            `INSERT INTO expert_risks (
+              id, session_id, persona_id, category, probability, impact, description
+            ) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+            [
               risk.id,
               result.sessionId,
               report.personaId,
@@ -155,39 +185,39 @@ export class DatabaseService {
               risk.probability,
               risk.impact,
               risk.description
-            );
-          }
+            ]
+          );
         }
+      }
 
-        // Save consolidation phase outputs
-        this.db!.prepare(`
-          INSERT INTO consolidation_phases (session_id, phase_name, phase_output)
-          VALUES (?, 'extraction', ?)
-        `).run(result.sessionId, JSON.stringify(result.extractionOutput));
+      // Save consolidation phase outputs
+      this.db.run(
+        `INSERT INTO consolidation_phases (session_id, phase_name, phase_output) VALUES (?, 'extraction', ?)`,
+        [result.sessionId, JSON.stringify(result.extractionOutput)]
+      );
 
-        this.db!.prepare(`
-          INSERT INTO consolidation_phases (session_id, phase_name, phase_output)
-          VALUES (?, 'critique', ?)
-        `).run(result.sessionId, JSON.stringify(result.critiqueOutput));
+      this.db.run(
+        `INSERT INTO consolidation_phases (session_id, phase_name, phase_output) VALUES (?, 'critique', ?)`,
+        [result.sessionId, JSON.stringify(result.critiqueOutput)]
+      );
 
-        this.db!.prepare(`
-          INSERT INTO consolidation_phases (session_id, phase_name, phase_output)
-          VALUES (?, 'decision', ?)
-        `).run(result.sessionId, JSON.stringify(result.decisionOutput));
+      this.db.run(
+        `INSERT INTO consolidation_phases (session_id, phase_name, phase_output) VALUES (?, 'decision', ?)`,
+        [result.sessionId, JSON.stringify(result.decisionOutput)]
+      );
 
-        this.db!.prepare(`
-          INSERT INTO consolidation_phases (session_id, phase_name, phase_output)
-          VALUES (?, 'synthesis', ?)
-        `).run(result.sessionId, JSON.stringify(result.synthesisOutput));
+      this.db.run(
+        `INSERT INTO consolidation_phases (session_id, phase_name, phase_output) VALUES (?, 'synthesis', ?)`,
+        [result.sessionId, JSON.stringify(result.synthesisOutput)]
+      );
 
-        // Save final blueprint as assistant message
-        this.db!.prepare(`
-          INSERT INTO messages (session_id, role, persona_id, content)
-          VALUES (?, 'assistant', 'consolidation', ?)
-        `).run(result.sessionId, result.finalBlueprint);
-      });
+      // Save final blueprint as assistant message
+      this.db.run(
+        `INSERT INTO messages (session_id, role, persona_id, content) VALUES (?, 'assistant', 'consolidation', ?)`,
+        [result.sessionId, result.finalBlueprint]
+      );
 
-      tx();
+      this.save();
       this.pruneOldSessions();
       this.logger.debug('Council result saved', { sessionId: result.sessionId }, correlationId);
     } catch (err) {
@@ -203,10 +233,26 @@ export class DatabaseService {
    */
   getRecentSessions(limit: number = 10): SessionSummary[] {
     if (!this.db) return [];
-    return this.db.prepare(`
+
+    const result = this.db.exec(`
       SELECT id, created_at, draft_plan_summary, tech_stack
-      FROM sessions ORDER BY created_at DESC LIMIT ?
-    `).all(limit) as SessionSummary[];
+      FROM sessions ORDER BY created_at DESC LIMIT ${limit}
+    `);
+
+    if (result.length === 0) return [];
+
+    const columns = result[0].columns;
+    const rows: SessionSummary[] = [];
+
+    for (const values of result[0].values) {
+      const row: Record<string, unknown> = {};
+      for (let i = 0; i < columns.length; i++) {
+        row[columns[i]] = values[i];
+      }
+      rows.push(row as unknown as SessionSummary);
+    }
+
+    return rows;
   }
 
   /**
@@ -214,19 +260,23 @@ export class DatabaseService {
    */
   getSessionBlueprint(sessionId: string): string | null {
     if (!this.db) return null;
-    const row = this.db.prepare(`
+
+    const result = this.db.exec(`
       SELECT content FROM messages
-      WHERE session_id = ? AND role = 'assistant' AND persona_id = 'consolidation'
+      WHERE session_id = '${sessionId.replace(/'/g, "''")}' AND role = 'assistant' AND persona_id = 'consolidation'
       ORDER BY created_at DESC LIMIT 1
-    `).get(sessionId) as { content: string } | undefined;
-    return row?.content ?? null;
+    `);
+
+    if (result.length === 0 || result[0].values.length === 0) return null;
+    return result[0].values[0][0] as string;
   }
 
   /**
-   * Close database connection
+   * Close database (no-op for sql.js, but we clear the reference)
    */
   close(): void {
     if (this.db) {
+      this.save();
       this.db.close();
       this.db = null;
       this.logger.info('Database service closed');
@@ -235,10 +285,12 @@ export class DatabaseService {
 
   private pruneOldSessions(): void {
     if (!this.db) return;
-    this.db.prepare(`
-      DELETE FROM sessions WHERE id NOT IN (
+    this.db.run(
+      `DELETE FROM sessions WHERE id NOT IN (
         SELECT id FROM sessions ORDER BY created_at DESC LIMIT ?
-      )
-    `).run(this.maxHistorySessions);
+      )`,
+      [this.maxHistorySessions]
+    );
+    this.save();
   }
 }

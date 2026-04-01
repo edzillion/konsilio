@@ -1,17 +1,17 @@
 /**
  * CouncilService Tests
  *
- * Tests for the 4-phase pipeline orchestration, expert parallel execution,
+ * Tests for the two-stage pipeline orchestration, expert parallel execution,
  * failure handling, and structured output parsing.
  *
  * Strategy: mock all service dependencies (OpenRouter, Database, Cache,
- * Prompt, Persona) and control what each phase returns.
+ * Prompt, Persona, Formatter) and control what each phase returns.
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { CouncilService, type CouncilConfig } from '../council.service.js';
 import type { Logger } from '../../logger.js';
-import type { Persona, StructuredExpertOutput, ExtractionPhaseOutput, CritiquePhaseOutput, DecisionPhaseOutput } from '../../personas/types.js';
+import type { Persona, StructuredExpertOutput, ExtractionPhaseOutput, CritiquePhaseOutput, DecisionPhaseOutput } from '../../personas/schemas.js';
 
 // ─── Helpers ───
 
@@ -91,12 +91,15 @@ const COUNCIL_CONFIG: CouncilConfig = {
   models: {
     experts: 'google/gemini-2.5-flash-lite',
     lead: 'google/gemini-2.5-pro',
+    formatter: 'openai/gpt-4o-mini',
   },
   timeouts: {
     expertMs: 90000,
     leadMs: 120000,
+    formatterMs: 30000,
   },
   maxDraftPlanLength: 12000,
+  formatterMaxRetries: 3,
 };
 
 // ─── Tests ───
@@ -108,6 +111,7 @@ describe('CouncilService', () => {
   let mockCache: { get: ReturnType<typeof vi.fn>; set: ReturnType<typeof vi.fn> };
   let mockPromptService: { loadCoreRules: ReturnType<typeof vi.fn>; loadWorkflowRules: ReturnType<typeof vi.fn>; loadConsolidationPhase: ReturnType<typeof vi.fn>; loadPersonaPromptData: ReturnType<typeof vi.fn> };
   let mockPersonaService: { createExperts: ReturnType<typeof vi.fn>; createLead: ReturnType<typeof vi.fn> };
+  let mockFormatterService: { formatProse: ReturnType<typeof vi.fn> };
   let service: CouncilService;
 
   beforeEach(() => {
@@ -129,11 +133,29 @@ describe('CouncilService', () => {
       ]),
       createLead: vi.fn().mockReturnValue(makePersona('lead')),
     };
+    mockFormatterService = { formatProse: vi.fn() };
 
-    // Default: all phases return valid JSON
+    // Formatter service mock returns structured output
+    mockFormatterService.formatProse
+      .mockResolvedValueOnce({
+        output: JSON.parse(makeExpertOutputJson('graph-dba')),
+        formattingConfidence: 9,
+        originalProse: 'prose from graph-dba',
+        durationMs: 500,
+        retries: 0,
+      })
+      .mockResolvedValueOnce({
+        output: JSON.parse(makeExpertOutputJson('node-fullstack')),
+        formattingConfidence: 8,
+        originalProse: 'prose from node-fullstack',
+        durationMs: 600,
+        retries: 0,
+      });
+
+    // OpenRouter: experts return prose, consolidation phases return JSON
     mockOpenRouter.call
-      .mockResolvedValueOnce(makeExpertOutputJson('graph-dba'))       // expert 1
-      .mockResolvedValueOnce(makeExpertOutputJson('node-fullstack'))   // expert 2
+      .mockResolvedValueOnce('prose from graph-dba')       // expert 1 prose
+      .mockResolvedValueOnce('prose from node-fullstack')   // expert 2 prose
       .mockResolvedValueOnce(makeExtractionJson())                     // extraction
       .mockResolvedValueOnce(makeCritiqueJson())                       // critique
       .mockResolvedValueOnce(makeDecisionJson())                       // decision
@@ -146,6 +168,7 @@ describe('CouncilService', () => {
       cacheService: mockCache as never,
       promptService: mockPromptService as never,
       personaService: mockPersonaService as never,
+      formatterService: mockFormatterService as never,
       config: COUNCIL_CONFIG,
     });
   });
@@ -188,9 +211,9 @@ describe('CouncilService', () => {
       expect(result.expertReports[1].personaId).toBe('node-fullstack');
     });
 
-    it('calls openRouter for each expert in parallel', async () => {
+    it('calls openRouter for each expert and consolidation phases', async () => {
       await service.run({ draftPlan: 'Build a REST API' });
-      // 2 experts + 4 consolidation phases = 6 calls
+      // 2 experts + 4 consolidation phases = 6 calls (formatter is mocked)
       expect(mockOpenRouter.call).toHaveBeenCalledTimes(6);
     });
 
@@ -239,12 +262,29 @@ describe('CouncilService', () => {
         makePersona('node-fullstack'),
         makePersona('devops'),
       ]);
+      // Reset formatter mock
+      mockFormatterService.formatProse
+        .mockReset()
+        .mockResolvedValueOnce({
+          output: JSON.parse(makeExpertOutputJson('node-fullstack')),
+          formattingConfidence: 9,
+          originalProse: 'prose from node-fullstack',
+          durationMs: 500,
+          retries: 0,
+        })
+        .mockResolvedValueOnce({
+          output: JSON.parse(makeExpertOutputJson('devops')),
+          formattingConfidence: 8,
+          originalProse: 'prose from devops',
+          durationMs: 600,
+          retries: 0,
+        });
       // Reset and set up: expert 1 fails, experts 2 & 3 succeed
       mockOpenRouter.call
         .mockReset()
         .mockRejectedValueOnce(new Error('Expert timeout'))           // expert 1 fails
-        .mockResolvedValueOnce(makeExpertOutputJson('node-fullstack')) // expert 2
-        .mockResolvedValueOnce(makeExpertOutputJson('devops'))         // expert 3
+        .mockResolvedValueOnce('prose from node-fullstack')           // expert 2 prose
+        .mockResolvedValueOnce('prose from devops')                   // expert 3 prose
         .mockResolvedValueOnce(makeExtractionJson())
         .mockResolvedValueOnce(makeCritiqueJson())
         .mockResolvedValueOnce(makeDecisionJson())
@@ -265,33 +305,6 @@ describe('CouncilService', () => {
     });
   });
 
-  // ─── JSON parsing ───
-
-  describe('run() - JSON parsing', () => {
-    it('strips markdown code blocks from expert JSON output', async () => {
-      mockOpenRouter.call
-        .mockReset()
-        .mockResolvedValueOnce('```json\n' + makeExpertOutputJson('graph-dba') + '\n```')
-        .mockResolvedValueOnce(makeExpertOutputJson('node-fullstack'))
-        .mockResolvedValueOnce(makeExtractionJson())
-        .mockResolvedValueOnce(makeCritiqueJson())
-        .mockResolvedValueOnce(makeDecisionJson())
-        .mockResolvedValueOnce('# Blueprint');
-
-      const result = await service.run({ draftPlan: 'Build a REST API' });
-      expect(result.expertReports[0].personaId).toBe('graph-dba');
-    });
-
-    it('throws when expert returns invalid JSON', async () => {
-      mockOpenRouter.call
-        .mockReset()
-        .mockResolvedValueOnce('not valid json')
-        .mockResolvedValueOnce('also not json');
-
-      await expect(service.run({ draftPlan: 'Build a REST API' })).rejects.toThrow('Too many expert failures');
-    });
-  });
-
   // ─── Database failure resilience ───
 
   describe('run() - database failure resilience', () => {
@@ -305,6 +318,75 @@ describe('CouncilService', () => {
         'Failed to save to database',
         expect.objectContaining({ error: 'DB write failed' }),
       );
+    });
+  });
+
+  // ─── Two-stage formatting ───
+
+  describe('run() - two-stage formatting', () => {
+    it('calls formatterService for each expert prose', async () => {
+      const result = await service.run({ draftPlan: 'Build a REST API' });
+      expect(mockFormatterService.formatProse).toHaveBeenCalledTimes(2);
+      expect(result.formattingDetails).toBeDefined();
+      expect(result.formattingDetails?.formattingSuccessRate).toBe(1);
+    });
+
+    it('includes formatting details in result', async () => {
+      const result = await service.run({ draftPlan: 'Build a REST API' });
+      expect(result.formattingDetails).toBeDefined();
+      expect(result.formattingDetails?.totalFormattingTimeMs).toBeGreaterThanOrEqual(0);
+      expect(result.finalBlueprint).toContain('Formatted');
+    });
+
+    it('handles formatter failures gracefully', async () => {
+      // Use 3 experts so 1 formatter failure still leaves 2 successful
+      mockPersonaService.createExperts.mockReturnValueOnce([
+        makePersona('graph-dba'),
+        makePersona('node-fullstack'),
+        makePersona('devops'),
+      ]);
+      mockFormatterService.formatProse
+        .mockReset()
+        .mockResolvedValueOnce({
+          output: JSON.parse(makeExpertOutputJson('graph-dba')),
+          formattingConfidence: 9,
+          originalProse: 'prose',
+          durationMs: 500,
+          retries: 0,
+        })
+        .mockRejectedValueOnce(new Error('Formatter timeout'))
+        .mockResolvedValueOnce({
+          output: JSON.parse(makeExpertOutputJson('devops')),
+          formattingConfidence: 8,
+          originalProse: 'prose',
+          durationMs: 600,
+          retries: 0,
+        });
+
+      mockOpenRouter.call
+        .mockReset()
+        .mockResolvedValueOnce('prose 1')
+        .mockResolvedValueOnce('prose 2')
+        .mockResolvedValueOnce('prose 3')
+        .mockResolvedValueOnce(makeExtractionJson())
+        .mockResolvedValueOnce(makeCritiqueJson())
+        .mockResolvedValueOnce(makeDecisionJson())
+        .mockResolvedValueOnce('# Blueprint');
+
+      const svc = new CouncilService({
+        logger: mockLogger,
+        openRouterService: mockOpenRouter as never,
+        databaseService: mockDatabase as never,
+        cacheService: mockCache as never,
+        promptService: mockPromptService as never,
+        personaService: mockPersonaService as never,
+        formatterService: mockFormatterService as never,
+        config: COUNCIL_CONFIG,
+      });
+
+      const result = await svc.run({ draftPlan: 'Build a REST API' });
+      expect(result.formattingDetails?.formattingSuccessRate).toBeCloseTo(0.667, 2);
+      expect(result.formattingDetails?.formattingErrors).toHaveLength(1);
     });
   });
 });

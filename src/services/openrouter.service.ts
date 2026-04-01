@@ -12,12 +12,22 @@ export interface Message {
   content: string;
 }
 
+export interface ResponseFormat {
+  type: 'json_schema';
+  json_schema: {
+    name: string;
+    strict: boolean;
+    schema: Record<string, unknown>;
+  };
+}
+
 export interface OpenRouterCallOptions {
   model: string;
   messages: Message[];
   maxTokens?: number;
   temperature?: number;
   timeoutMs?: number;
+  responseFormat?: ResponseFormat;
 }
 
 export interface OpenRouterServiceConfig {
@@ -79,6 +89,7 @@ export class OpenRouterService {
             messages: opts.messages,
             max_tokens: opts.maxTokens ?? 4096,
             temperature: opts.temperature ?? 0.3,
+            ...(opts.responseFormat && { response_format: opts.responseFormat }),
           }),
           signal: controller.signal,
         });

@@ -8,7 +8,7 @@
 import type { Logger } from '../logger.js';
 import type { CacheService } from './cache.service.js';
 import type { PromptService } from './prompt.service.js';
-import type { Persona } from '../personas/types.js';
+import type { Persona } from '../personas/schemas.js';
 import { Expert } from '../personas/expert.js';
 import { Lead } from '../personas/lead.js';
 

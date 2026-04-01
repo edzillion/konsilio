@@ -6,8 +6,11 @@
  */
 
 import { readFileSync, existsSync } from 'node:fs';
-import { join } from 'node:path';
+import { join, dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import type { Logger } from '../logger.js';
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
 
 export interface PromptServiceConfig {
   /** Root directory for prompt files */
@@ -31,7 +34,8 @@ export class PromptService {
   private readonly logger: Logger;
 
   constructor(config: PromptServiceConfig | undefined, logger: Logger) {
-    this.promptsDir = config?.promptsDir ?? join(process.cwd(), 'src', 'prompts');
+    // Resolve prompts relative to this file's location (works in both src/ and build/)
+    this.promptsDir = config?.promptsDir ?? join(__dirname, '..', 'prompts');
     this.logger = logger;
   }
 

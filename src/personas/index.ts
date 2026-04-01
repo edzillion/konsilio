@@ -5,7 +5,7 @@
  * Persona creation is handled by PersonaService.
  */
 
-// Export types
-export * from './types.js';
+// Export schemas and types
+export * from './schemas.js';
 export { Expert, type ExpertConfig } from './expert.js';
 export { Lead, type LeadConfig } from './lead.js';
