@@ -66,7 +66,7 @@ Use 'list_personas' to see all available personas. Enable personas in konsilio.j
     }
 
     try {
-      const services = getServices();
+      const services = await getServices();
       const result = await services.councilService.run(
         {
           draftPlan,
@@ -97,7 +97,7 @@ server.tool(
     limit: z.number().min(1).max(50).default(10).describe("Number of sessions to retrieve"),
   },
   async (params) => {
-    const services = getServices();
+    const services = await getServices();
     const sessions = services.databaseService.getRecentSessions(params.limit);
     if (sessions.length === 0) {
       return { content: [{ type: "text" as const, text: "No previous sessions found." }] };
@@ -121,7 +121,7 @@ server.tool(
   "List all expert personas in the council.",
   {},
   async () => {
-    const services = getServices();
+    const services = await getServices();
     const personaIds = services.personaService.getAvailablePersonaIds();
     const allPersonas = services.personaService.createExperts(personaIds, 'default');
     let output = "# Council Personas\n\n";

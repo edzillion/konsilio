@@ -22,7 +22,12 @@ vi.mock('../services/openrouter.service.js', () => ({
   OpenRouterService: vi.fn(),
 }));
 vi.mock('../services/database.service.js', () => ({
-  DatabaseService: vi.fn(),
+  DatabaseService: {
+    create: vi.fn().mockResolvedValue({
+      checkHealth: vi.fn().mockReturnValue({ status: 'healthy', latencyMs: 1 }),
+      close: vi.fn(),
+    }),
+  },
 }));
 vi.mock('../services/cache.service.js', () => ({
   CacheService: vi.fn(),
@@ -92,13 +97,13 @@ describe('container', () => {
     it('calls validateConfig before creating services', async () => {
       const { createServices } = await import('../container.js');
       const { validateConfig: mockValidate } = await import('../config.js');
-      createServices();
+      await createServices();
       expect(mockValidate).toHaveBeenCalledOnce();
     });
 
     it('creates all 6 services', async () => {
       const { createServices } = await import('../container.js');
-      const services = createServices();
+      const services = await createServices();
       expect(services).toHaveProperty('openRouterService');
       expect(services).toHaveProperty('databaseService');
       expect(services).toHaveProperty('cacheService');
@@ -110,7 +115,7 @@ describe('container', () => {
     it('constructs OpenRouterService with apiKey and baseUrl', async () => {
       const { createServices } = await import('../container.js');
       const { OpenRouterService: MockOR } = await import('../services/openrouter.service.js');
-      createServices();
+      await createServices();
       expect(MockOR).toHaveBeenCalledWith(
         expect.objectContaining({
           apiKey: 'test-key',
@@ -123,8 +128,8 @@ describe('container', () => {
     it('constructs DatabaseService with dbPath and maxHistorySessions', async () => {
       const { createServices } = await import('../container.js');
       const { DatabaseService: MockDB } = await import('../services/database.service.js');
-      createServices();
-      expect(MockDB).toHaveBeenCalledWith(
+      await createServices();
+      expect(MockDB.create).toHaveBeenCalledWith(
         expect.objectContaining({
           dbPath: './data/test.db',
           maxHistorySessions: 10,
@@ -137,7 +142,7 @@ describe('container', () => {
     it('constructs CacheService with TTL in milliseconds', async () => {
       const { createServices } = await import('../container.js');
       const { CacheService: MockCache } = await import('../services/cache.service.js');
-      createServices();
+      await createServices();
       // cacheTtlSeconds: 3600 → 3600 * 1000 = 3_600_000 ms
       expect(MockCache).toHaveBeenCalledWith(3_600_000);
     });
@@ -145,7 +150,7 @@ describe('container', () => {
     it('constructs CouncilService with enabledPersonaIds from config', async () => {
       const { createServices } = await import('../container.js');
       const { CouncilService: MockCouncil } = await import('../services/council.service.js');
-      createServices();
+      await createServices();
       expect(MockCouncil).toHaveBeenCalledWith(
         expect.objectContaining({
           config: expect.objectContaining({
@@ -159,23 +164,30 @@ describe('container', () => {
   // ─── Singleton pattern ───
 
   describe('getServices()', () => {
-    it('returns the same instance on repeated calls', async () => {
+    it('returns the same promise instance on repeated calls', async () => {
       const { getServices } = await import('../container.js');
       const first = getServices();
       const second = getServices();
       expect(first).toBe(second);
+      // Also verify the resolved value
+      const resolved = await first;
+      expect(resolved).toHaveProperty('databaseService');
     });
   });
 
   // ─── Reset ───
 
   describe('resetServices()', () => {
-    it('causes getServices to create a new instance after reset', async () => {
+    it('causes getServices to create a new promise after reset', async () => {
       const { getServices, resetServices } = await import('../container.js');
       const first = getServices();
       resetServices();
       const second = getServices();
       expect(first).not.toBe(second);
+      // Verify both resolve properly
+      const resolvedFirst = await first;
+      const resolvedSecond = await second;
+      expect(resolvedFirst).not.toBe(resolvedSecond);
     });
   });
 });

@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
-import Database from "better-sqlite3";
-import { existsSync } from "node:fs";
+import initSqlJs, { type Database } from "sql.js";
+import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 
 const DB_PATH = resolve(process.cwd(), "data/konsilio.db");
@@ -39,23 +39,37 @@ interface Message {
   created_at: string;
 }
 
-function getDatabase(): Database.Database | null {
+async function getDatabase(): Promise<Database | null> {
   if (!existsSync(DB_PATH)) return null;
-  return new Database(DB_PATH, { readonly: true });
+  const SQL = await initSqlJs({
+    locateFile: (file: string) => `https://sql.js.org/dist/${file}`
+  });
+  const buffer = readFileSync(DB_PATH);
+  return new SQL.Database(buffer);
 }
 
-function listSessions(db: Database.Database, limit: number = 10): void {
-  const sessions = db.prepare(`
+function mapRow(columns: string[], values: unknown[]): Record<string, unknown> {
+  const row: Record<string, unknown> = {};
+  for (let i = 0; i < columns.length; i++) {
+    row[columns[i]] = values[i];
+  }
+  return row;
+}
+
+function listSessions(db: Database, limit: number = 10): void {
+  const result = db.exec(`
     SELECT id, created_at, draft_plan_summary, tech_stack
     FROM sessions
     ORDER BY created_at DESC
-    LIMIT ?
-  `).all(limit) as Session[];
+    LIMIT ${limit}
+  `);
 
-  if (sessions.length === 0) {
+  if (result.length === 0 || result[0].values.length === 0) {
     console.log("No sessions found.");
     return;
   }
+
+  const sessions = result[0].values.map(v => mapRow(result[0].columns, v)) as unknown as Session[];
 
   console.log("\n╭──────────────────────────────────────────────────────────────╮");
   console.log("│ 📋 Council Sessions                                           │");
@@ -67,11 +81,17 @@ function listSessions(db: Database.Database, limit: number = 10): void {
     const summary = s.draft_plan_summary?.slice(0, 50) ?? "No summary";
     
     // Get expert count and total time
-    const stats = db.prepare(`
+    const statsResult = db.exec(`
       SELECT COUNT(*) as count, SUM(duration_ms) as total_ms
       FROM expert_findings
-      WHERE session_id = ?
-    `).get(s.id) as { count: number; total_ms: number | null };
+      WHERE session_id = '${s.id.replace(/'/g, "''")}'
+    `);
+    
+    let stats: { count: number; total_ms: number | null } = { count: 0, total_ms: null };
+    if (statsResult.length > 0 && statsResult[0].values.length > 0) {
+      const row = mapRow(statsResult[0].columns, statsResult[0].values[0]);
+      stats = { count: Number(row.count), total_ms: row.total_ms as number | null };
+    }
     
     const totalSec = stats.total_ms ? (stats.total_ms / 1000).toFixed(1) : "?";
     
@@ -88,17 +108,20 @@ function listSessions(db: Database.Database, limit: number = 10): void {
   console.log("╰──────────────────────────────────────────────────────────────╯\n");
 }
 
-function showSession(db: Database.Database, sessionId: string): void {
+function showSession(db: Database, sessionId: string): void {
+  const escapedId = sessionId.replace(/'/g, "''");
+  
   // Get session
-  const session = db.prepare(`
-    SELECT * FROM sessions WHERE id = ? OR id LIKE ?
-  `).get(sessionId, `${sessionId}%`) as Session | undefined;
+  const sessionResult = db.exec(`
+    SELECT * FROM sessions WHERE id = '${escapedId}' OR id LIKE '${escapedId}%'
+  `);
 
-  if (!session) {
+  if (sessionResult.length === 0 || sessionResult[0].values.length === 0) {
     console.log(`❌ Session not found: ${sessionId}`);
     return;
   }
 
+  const session = mapRow(sessionResult[0].columns, sessionResult[0].values[0]) as unknown as Session;
   const fullId = session.id;
   const date = new Date(session.created_at).toLocaleString();
 
@@ -117,24 +140,32 @@ function showSession(db: Database.Database, sessionId: string): void {
   console.log("│");
   
   // Get user message (draft plan)
-  const userMsg = db.prepare(`
+  const userMsgResult = db.exec(`
     SELECT content FROM messages
-    WHERE session_id = ? AND role = 'user'
+    WHERE session_id = '${escapedId}' AND role = 'user'
     ORDER BY created_at ASC LIMIT 1
-  `).get(fullId) as { content: string } | undefined;
+  `);
 
-  if (userMsg) {
-    for (const line of userMsg.content.split("\n")) {
+  if (userMsgResult.length > 0 && userMsgResult[0].values.length > 0) {
+    const userMsg = userMsgResult[0].values[0][0] as string;
+    for (const line of userMsg.split("\n")) {
       console.log(`│   ${line}`);
     }
   }
 
   // Get expert findings grouped by persona
-  const findings = db.prepare(`
+  const findingsResult = db.exec(`
     SELECT * FROM expert_findings
-    WHERE session_id = ?
+    WHERE session_id = '${escapedId}'
     ORDER BY persona_id, severity
-  `).all(fullId) as ExpertFinding[];
+  `);
+
+  const findings: ExpertFinding[] = [];
+  if (findingsResult.length > 0) {
+    for (const values of findingsResult[0].values) {
+      findings.push(mapRow(findingsResult[0].columns, values) as unknown as ExpertFinding);
+    }
+  }
 
   console.log("├──────────────────────────────────────────────────────────────┤");
   console.log("│ 🧠 Expert Findings:");
@@ -165,18 +196,19 @@ function showSession(db: Database.Database, sessionId: string): void {
   }
 
   // Final blueprint (from consolidation phase)
-  const blueprint = db.prepare(`
+  const blueprintResult = db.exec(`
     SELECT content FROM messages
-    WHERE session_id = ? AND role = 'assistant' AND persona_id = 'consolidation'
+    WHERE session_id = '${escapedId}' AND role = 'assistant' AND persona_id = 'consolidation'
     ORDER BY created_at DESC LIMIT 1
-  `).get(fullId) as { content: string } | undefined;
+  `);
 
-  if (blueprint) {
+  if (blueprintResult.length > 0 && blueprintResult[0].values.length > 0) {
+    const blueprint = blueprintResult[0].values[0][0] as string;
     console.log("├──────────────────────────────────────────────────────────────┤");
     console.log("│ 👑 Council Blueprint:");
     console.log("│");
     
-    for (const line of blueprint.content.split("\n")) {
+    for (const line of blueprint.split("\n")) {
       console.log(`│   ${line}`);
     }
   }
@@ -185,21 +217,28 @@ function showSession(db: Database.Database, sessionId: string): void {
 }
 
 // Main
-const args = process.argv.slice(2);
-const db = getDatabase();
+async function main() {
+  const args = process.argv.slice(2);
+  const db = await getDatabase();
 
-if (!db) {
-  console.log("❌ No database found at ./data/konsilio.db");
-  console.log("   Run a council session first to create data.");
-  process.exit(1);
-}
-
-try {
-  if (args.length === 0) {
-    listSessions(db);
-  } else {
-    showSession(db, args[0]);
+  if (!db) {
+    console.log("❌ No database found at ./data/konsilio.db");
+    console.log("   Run a council session first to create data.");
+    process.exit(1);
   }
-} finally {
-  db.close();
+
+  try {
+    if (args.length === 0) {
+      listSessions(db);
+    } else {
+      showSession(db, args[0]);
+    }
+  } finally {
+    db.close();
+  }
 }
+
+main().catch((err) => {
+  console.error("Fatal error:", err);
+  process.exit(1);
+});

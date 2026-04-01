@@ -15,5 +15,6 @@
   },
   "maxDraftPlanLength": 12000,
   "maxHistorySessions": 10,
-  "databasePath": "./data/konsilio.db"
+  "databasePath": "./data/konsilio.db",
+  "cacheTtlSeconds": 3600
 }

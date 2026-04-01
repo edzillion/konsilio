@@ -5,7 +5,7 @@
  * Loads phase-specific prompts from markdown files.
  */
 
-import type { Persona } from './types.js';
+import type { Persona } from './schemas.js';
 
 export interface LeadConfig {
   phase: 'extraction' | 'critique' | 'decision' | 'synthesis';

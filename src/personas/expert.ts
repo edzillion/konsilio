@@ -6,7 +6,7 @@
  */
 
 import type { PersonaPromptData } from '../services/prompt.service.js';
-import type { Persona } from './types.js';
+import type { Persona } from './schemas.js';
 
 export interface ExpertConfig {
   personaId: string;

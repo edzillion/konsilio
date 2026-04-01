@@ -1,8 +1,7 @@
 /**
  * Config Tests
  *
- * Tests for CLI arg parsing, env file loading, konsilio.json parsing,
- * and validation logic.
+ * Tests for CLI arg parsing, konsilio.json parsing, and validation logic.
  *
  * Strategy: mock node:fs to control file system reads, and manipulate
  * process.argv / process.env to test priority ordering.
@@ -41,9 +40,6 @@ const VALID_KONSILIO_JSON = JSON.stringify({
   databasePath: './data/konsilio.db',
 });
 
-/** Minimal valid .env file content */
-const VALID_ENV_FILE = 'OPENROUTER_API_KEY=env-file-key\n';
-
 // ─── Tests ───
 
 describe('config', () => {
@@ -53,7 +49,7 @@ describe('config', () => {
   beforeEach(() => {
     originalArgv = [...process.argv];
     originalEnv = { ...process.env };
-    // Default: no .env file, valid konsilio.json
+    // Default: valid konsilio.json
     mockExistsSync.mockImplementation((p: unknown) => {
       const path = String(p);
       return path.endsWith('konsilio.json');
@@ -69,58 +65,6 @@ describe('config', () => {
     process.argv = originalArgv;
     process.env = originalEnv;
     vi.resetModules();
-  });
-
-  // ─── .env file loading ───
-
-  describe('.env file loading', () => {
-    it('reads OPENROUTER_API_KEY from .env file', async () => {
-      delete process.env.OPENROUTER_API_KEY;
-      mockExistsSync.mockImplementation((p: unknown) => {
-        const path = String(p);
-        return path.endsWith('.env') || path.endsWith('konsilio.json');
-      });
-      mockReadFileSync.mockImplementation((p: unknown) => {
-        const path = String(p);
-        if (path.endsWith('.env')) return VALID_ENV_FILE;
-        if (path.endsWith('konsilio.json')) return VALID_KONSILIO_JSON;
-        return '';
-      });
-      const { config } = await loadFreshConfig();
-      expect(config.openrouterApiKey).toBe('env-file-key');
-    });
-
-    it('strips surrounding quotes from .env values', async () => {
-      delete process.env.OPENROUTER_API_KEY;
-      mockExistsSync.mockImplementation((p: unknown) => {
-        const path = String(p);
-        return path.endsWith('.env') || path.endsWith('konsilio.json');
-      });
-      mockReadFileSync.mockImplementation((p: unknown) => {
-        const path = String(p);
-        if (path.endsWith('.env')) return 'OPENROUTER_API_KEY="quoted-key"\n';
-        if (path.endsWith('konsilio.json')) return VALID_KONSILIO_JSON;
-        return '';
-      });
-      const { config } = await loadFreshConfig();
-      expect(config.openrouterApiKey).toBe('quoted-key');
-    });
-
-    it('ignores comment lines in .env file', async () => {
-      delete process.env.OPENROUTER_API_KEY;
-      mockExistsSync.mockImplementation((p: unknown) => {
-        const path = String(p);
-        return path.endsWith('.env') || path.endsWith('konsilio.json');
-      });
-      mockReadFileSync.mockImplementation((p: unknown) => {
-        const path = String(p);
-        if (path.endsWith('.env')) return '# This is a comment\nOPENROUTER_API_KEY=real-key\n';
-        if (path.endsWith('konsilio.json')) return VALID_KONSILIO_JSON;
-        return '';
-      });
-      const { config } = await loadFreshConfig();
-      expect(config.openrouterApiKey).toBe('real-key');
-    });
   });
 
   // ─── CLI arg parsing ───
@@ -140,19 +84,9 @@ describe('config', () => {
       expect(config.openrouterApiKey).toBe('cli-key');
     });
 
-    it('CLI arg takes priority over .env file', async () => {
+    it('CLI arg takes priority over process.env even when both are set', async () => {
       delete process.env.OPENROUTER_API_KEY;
       process.argv = ['node', 'index.js', '--api-key=cli-key'];
-      mockExistsSync.mockImplementation((p: unknown) => {
-        const path = String(p);
-        return path.endsWith('.env') || path.endsWith('konsilio.json');
-      });
-      mockReadFileSync.mockImplementation((p: unknown) => {
-        const path = String(p);
-        if (path.endsWith('.env')) return VALID_ENV_FILE;
-        if (path.endsWith('konsilio.json')) return VALID_KONSILIO_JSON;
-        return '';
-      });
       const { config } = await loadFreshConfig();
       expect(config.openrouterApiKey).toBe('cli-key');
     });

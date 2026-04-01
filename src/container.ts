@@ -14,6 +14,7 @@ import { CacheService } from './services/cache.service.js';
 import { PromptService } from './services/prompt.service.js';
 import { PersonaService } from './services/persona.service.js';
 import { CouncilService, type CouncilConfig } from './services/council.service.js';
+import { FormatterService, type FormatterConfig } from './services/formatter.service.js';
 
 export interface AppServices {
   openRouterService: OpenRouterService;
@@ -25,9 +26,9 @@ export interface AppServices {
 }
 
 /**
- * Create and wire up all application services
+ * Create and wire up all application services (async)
  */
-export function createServices(): AppServices {
+export async function createServices(): Promise<AppServices> {
   // Validate configuration before creating services
   validateConfig();
 
@@ -40,8 +41,8 @@ export function createServices(): AppServices {
     logger,
   );
 
-  // Create Database service
-  const databaseService = new DatabaseService(
+  // Create Database service (async factory due to WASM loading)
+  const databaseService = await DatabaseService.create(
     {
       dbPath: config.databasePath,
       maxHistorySessions: config.maxHistorySessions,
@@ -64,13 +65,26 @@ export function createServices(): AppServices {
   });
 
   // Create Council service with all dependencies
-  // Note: validateConfig() ensures enabledPersonas is defined
   const councilConfig: CouncilConfig = {
     enabledPersonaIds: config.enabledPersonas!,
     models: config.models,
     timeouts: config.timeouts,
     maxDraftPlanLength: config.maxDraftPlanLength,
+    formatterMaxRetries: config.formatterMaxRetries,
   };
+
+  // Create Formatter service
+  const formatterConfig: FormatterConfig = {
+    model: config.models.formatter,
+    timeoutMs: config.timeouts.formatterMs,
+    maxRetries: config.formatterMaxRetries,
+  };
+
+  const formatterService = new FormatterService({
+    openRouterService,
+    logger,
+    config: formatterConfig,
+  });
 
   const councilService = new CouncilService({
     logger,
@@ -79,6 +93,7 @@ export function createServices(): AppServices {
     cacheService,
     promptService,
     personaService,
+    formatterService,
     config: councilConfig,
   });
 
@@ -95,12 +110,12 @@ export function createServices(): AppServices {
 /**
  * Singleton services instance (lazy initialized)
  */
-let _services: AppServices | null = null;
+let _services: Promise<AppServices> | null = null;
 
 /**
- * Get the singleton services instance
+ * Get the singleton services instance (returns a Promise)
  */
-export function getServices(): AppServices {
+export function getServices(): Promise<AppServices> {
   if (!_services) {
     _services = createServices();
   }

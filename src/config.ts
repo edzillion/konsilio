@@ -24,41 +24,9 @@ function parseCliArgs(): Record<string, string> {
 
 const cliArgs = parseCliArgs();
 
-// ─── Environment File Loading ───
-
-function loadEnvFile(): Record<string, string> {
-  // Search: cwd first, then script parent dir
-  const candidates = [
-    resolve(process.cwd(), ".env"),
-    resolve(__dirname, "..", ".env"),
-  ];
-  
-  for (const envPath of candidates) {
-    if (!existsSync(envPath)) continue;
-    const content = readFileSync(envPath, "utf-8");
-    const vars: Record<string, string> = {};
-    for (const line of content.split("\n")) {
-      const trimmed = line.trim();
-      if (!trimmed || trimmed.startsWith("#")) continue;
-      const eqIdx = trimmed.indexOf("=");
-      if (eqIdx === -1) continue;
-      let value = trimmed.slice(eqIdx + 1).trim();
-      // Strip surrounding quotes (single or double)
-      if ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'"))) {
-        value = value.slice(1, -1);
-      }
-      vars[trimmed.slice(0, eqIdx).trim()] = value;
-    }
-    return vars;
-  }
-  return {};
-}
-
-const fileEnv = loadEnvFile();
-
-// Priority: CLI args > process.env > .env file > fallback
+// Priority: CLI args > process.env > fallback
 function env(key: string, fallback?: string): string | undefined {
-  return cliArgs[key] ?? process.env[key] ?? fileEnv[key] ?? fallback;
+  return cliArgs[key] ?? process.env[key] ?? fallback;
 }
 
 // ─── Validators ───
@@ -90,19 +58,25 @@ interface KonsilioConfig {
   models?: {
     experts?: string;
     lead?: string;
+    formatter?: string;
   };
   timeouts?: {
     expertMs?: number;
     leadMs?: number;
+    formatterMs?: number;
   };
   maxDraftPlanLength?: number;
   maxHistorySessions?: number;
   databasePath?: string;
+  cacheTtlSeconds?: number;
+  formatter?: {
+    maxRetries?: number;
+  };
 }
 
 function loadKonsilioConfig(): KonsilioConfig {
+  // Resolve relative to this file's location (works in both src/ and build/)
   const candidates = [
-    resolve(process.cwd(), "konsilio.json"),
     resolve(__dirname, "..", "konsilio.json"),
   ];
   
@@ -141,24 +115,29 @@ export const config = {
 
   // Model Configuration
   models: {
-    experts: env("EXPERT_MODEL") ?? konsilioConfig.models?.experts ?? "google/gemini-2.5-flash-lite",
-    lead: env("LEAD_MODEL") ?? konsilioConfig.models?.lead ?? "google/gemini-2.5-pro",
+    experts: konsilioConfig.models?.experts ?? "google/gemini-2.5-flash-lite",
+    lead: konsilioConfig.models?.lead ?? "google/gemini-2.5-pro",
+    formatter: konsilioConfig.models?.formatter ?? "openai/gpt-4o-mini",
   },
 
   // Timeout Configuration
   timeouts: {
     expertMs: konsilioConfig.timeouts?.expertMs ?? 90_000,
     leadMs: konsilioConfig.timeouts?.leadMs ?? 120_000,
+    formatterMs: konsilioConfig.timeouts?.formatterMs ?? 30_000,
   },
 
+  // Formatter retries
+  formatterMaxRetries: konsilioConfig.formatter?.maxRetries ?? 3,
+
   // Limits
-  maxDraftPlanLength: konsilioConfig.maxDraftPlanLength ?? parsePositiveInt(env("DRAFT_PLAN_MAX_LENGTH"), 12000),
-  maxHistorySessions: konsilioConfig.maxHistorySessions ?? parsePositiveInt(env("MAX_HISTORY_SESSIONS"), 10),
+  maxDraftPlanLength: konsilioConfig.maxDraftPlanLength ?? 12000,
+  maxHistorySessions: konsilioConfig.maxHistorySessions ?? 10,
   maxParallelExperts: 4,
 
   // Database & Caching
-  databasePath: konsilioConfig.databasePath ?? env("DATABASE_PATH", "./data/konsilio.db") ?? "./data/konsilio.db",
-  cacheTtlSeconds: parsePositiveInt(env("CACHE_TTL_SECONDS"), 3600),
+  databasePath: konsilioConfig.databasePath ?? "./data/konsilio.db",
+  cacheTtlSeconds: konsilioConfig.cacheTtlSeconds ?? 3600,
 } as const;
 
 // ─── Validation ───
@@ -170,7 +149,7 @@ export const config = {
 export function validateConfig(): void {
   if (!config.openrouterApiKey) {
     throw new Error(
-      "Missing OPENROUTER_API_KEY. Set it in your .env file or via OPENROUTER_API_KEY environment variable.\n" +
+      "Missing OPENROUTER_API_KEY. Set it via OPENROUTER_API_KEY environment variable.\n" +
       "Get your key at https://openrouter.ai/keys"
     );
   }
