@@ -11,8 +11,7 @@
     "dev": "tsc --watch",
     "start": "node build/index.js",
     "start:server": "node build/server.js",
-    
-    
+    "inspect": "npx @modelcontextprotocol/inspector node /g/dev/konsilio/build/index.js",
     "typecheck": "tsc --noEmit",
     "history": "node build/cli/history.js",
     "test": "vitest run --reporter=verbose",
@@ -23,14 +22,14 @@
   "license": "MIT",
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.28.0",
-    "better-sqlite3": "^12.8.0",
     "pino": "^10.3.1",
+    "sql.js": "^1.14.1",
     "zod": "^4.3.6"
   },
   "devDependencies": {
     "@modelcontextprotocol/inspector": "^0.21.1",
-    "@types/better-sqlite3": "^7.6.13",
     "@types/node": "^25.5.0",
+    "@types/sql.js": "^1.4.11",
     "@vitest/coverage-v8": "^4.1.2",
     "typescript": "^6.0.2",
     "vitest": "^4.1.2"
