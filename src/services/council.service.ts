@@ -47,6 +47,10 @@ export interface CouncilConfig {
     leadMs: number;
     formatterMs: number;
   };
+  maxTokens: {
+    experts: number;
+    lead: number;
+  };
   maxDraftPlanLength: number;
   formatterMaxRetries: number;
 }
@@ -262,14 +266,26 @@ export class CouncilService {
     const rawOutput = await this.deps.openRouterService.call({
       model,
       messages,
-      maxTokens: 8192,
+      maxTokens: this.deps.config.maxTokens.lead,
       temperature: 0.2,
       timeoutMs: this.deps.config.timeouts.leadMs
     });
 
-    const output = ExtractionPhaseOutputSchema.parse(JSON.parse(this.cleanJsonOutput(rawOutput)));
-    log.debug('Extraction complete', { totalFindings: output.totalFindings });
-    return output;
+    const cleaned = this.cleanJsonOutput(rawOutput);
+    try {
+      const parsed = JSON.parse(cleaned);
+      const output = ExtractionPhaseOutputSchema.parse(parsed);
+      log.debug('Extraction complete', { totalFindings: output.totalFindings });
+      return output;
+    } catch (err) {
+      log.error('Failed to parse extraction JSON', {
+        rawLength: rawOutput.length,
+        cleanedLength: cleaned.length,
+        rawPreview: rawOutput.slice(0, 500),
+        error: err instanceof Error ? err.message : String(err)
+      });
+      throw new Error(`Extraction phase: failed to parse JSON. ${err instanceof Error ? err.message : String(err)}`);
+    }
   }
 
   /**
@@ -294,14 +310,26 @@ export class CouncilService {
     const rawOutput = await this.deps.openRouterService.call({
       model,
       messages,
-      maxTokens: 8192,
+      maxTokens: this.deps.config.maxTokens.lead,
       temperature: 0.3,
       timeoutMs: this.deps.config.timeouts.leadMs
     });
 
-    const output = CritiquePhaseOutputSchema.parse(JSON.parse(this.cleanJsonOutput(rawOutput)));
-    log.debug('Critique complete', { contradictions: output.contradictions.length, unsupportedClaims: output.unsupportedClaims.length });
-    return output;
+    const cleaned = this.cleanJsonOutput(rawOutput);
+    try {
+      const parsed = JSON.parse(cleaned);
+      const output = CritiquePhaseOutputSchema.parse(parsed);
+      log.debug('Critique complete', { contradictions: output.contradictions.length, unsupportedClaims: output.unsupportedClaims.length });
+      return output;
+    } catch (err) {
+      log.error('Failed to parse critique JSON', {
+        rawLength: rawOutput.length,
+        cleanedLength: cleaned.length,
+        rawPreview: rawOutput.slice(0, 500),
+        error: err instanceof Error ? err.message : String(err)
+      });
+      throw new Error(`Critique phase: failed to parse JSON. ${err instanceof Error ? err.message : String(err)}`);
+    }
   }
 
   /**
@@ -326,14 +354,26 @@ export class CouncilService {
     const rawOutput = await this.deps.openRouterService.call({
       model,
       messages,
-      maxTokens: 8192,
+      maxTokens: this.deps.config.maxTokens.lead,
       temperature: 0.2,
       timeoutMs: this.deps.config.timeouts.leadMs
     });
 
-    const output = DecisionPhaseOutputSchema.parse(JSON.parse(this.cleanJsonOutput(rawOutput)));
-    log.debug('Decision complete', { accepted: output.acceptedCount, rejected: output.rejectedCount });
-    return output;
+    const cleaned = this.cleanJsonOutput(rawOutput);
+    try {
+      const parsed = JSON.parse(cleaned);
+      const output = DecisionPhaseOutputSchema.parse(parsed);
+      log.debug('Decision complete', { accepted: output.acceptedCount, rejected: output.rejectedCount });
+      return output;
+    } catch (err) {
+      log.error('Failed to parse decision JSON', {
+        rawLength: rawOutput.length,
+        cleanedLength: cleaned.length,
+        rawPreview: rawOutput.slice(0, 500),
+        error: err instanceof Error ? err.message : String(err)
+      });
+      throw new Error(`Decision phase: failed to parse JSON. ${err instanceof Error ? err.message : String(err)}`);
+    }
   }
 
   /**
@@ -394,7 +434,7 @@ export class CouncilService {
   }
 
   /**
-   * Clean JSON output (remove markdown code blocks)
+   * Clean JSON output from LLM responses (strip markdown code fences)
    */
   private cleanJsonOutput(raw: string): string {
     let cleaned = raw.trim();

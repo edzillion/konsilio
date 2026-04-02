@@ -69,6 +69,7 @@ export async function createServices(): Promise<AppServices> {
     enabledPersonaIds: config.enabledPersonas!,
     models: config.models,
     timeouts: config.timeouts,
+    maxTokens: config.maxTokens,
     maxDraftPlanLength: config.maxDraftPlanLength,
     formatterMaxRetries: config.formatterMaxRetries,
   };
