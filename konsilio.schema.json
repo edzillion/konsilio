@@ -1,22 +1,40 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "title": "Konsilio Configuration",
+  "description": "Configuration file for the Konsilio Council of Experts MCP server",
   "type": "object",
   "properties": {
+    "$schema": {
+      "type": "string",
+      "description": "Path to this JSON schema file for IDE validation"
+    },
     "personas": {
       "type": "object",
+      "description": "Persona configuration for expert analysis",
       "properties": {
         "enabled": {
           "type": "array",
           "items": {
             "type": "string",
-            "enum": ["securityArchitect", "performanceEngineer", "uxDxDesigner", "devopsEngineer", "typescriptEngineer", "graphDba", "nodeFullstackEngineer", "devToolingSpecialist", "distributedSystemsEngineer", "testArchitect"]
+            "enum": [
+              "security",
+              "performance",
+              "ux-dx",
+              "devops",
+              "typescript",
+              "graph-dba",
+              "node-fullstack",
+              "dev-tooling",
+              "distributed-systems",
+              "test-architect"
+            ]
           },
           "minItems": 2,
-          "description": "Expert personas to include in council consultations"
+          "description": "Expert personas to include in council consultations. Must have at least 2."
         }
       },
-      "required": ["enabled"]
+      "required": ["enabled"],
+      "additionalProperties": false
     },
     "constitution": {
       "type": "string",
@@ -24,21 +42,110 @@
     },
     "models": {
       "type": "object",
+      "description": "Default model configuration for all personas",
       "properties": {
-        "experts": { "type": "string", "description": "Model for expert personas" },
-        "lead": { "type": "string", "description": "Model for consolidation phases" }
-      }
+        "experts": {
+          "type": "string",
+          "description": "Default model for expert personas. Override per-persona with personaModels."
+        },
+        "lead": {
+          "type": "string",
+          "description": "Model for consolidation phases (extraction, critique, decision, synthesis)"
+        },
+        "formatter": {
+          "type": "string",
+          "description": "Model used to format prose into structured JSON"
+        }
+      },
+      "additionalProperties": false
+    },
+    "personaModels": {
+      "type": "object",
+      "description": "Per-persona model defaults. Maps personaId to model ID. Overrides models.experts for specific personas.",
+      "additionalProperties": {
+        "type": "string",
+        "description": "OpenRouter model ID for this persona"
+      },
+      "examples": [
+        {
+          "security": "openai/gpt-4o",
+          "performance": "anthropic/claude-sonnet-4"
+        }
+      ]
     },
     "timeouts": {
       "type": "object",
+      "description": "Timeout configuration for API calls",
       "properties": {
-        "expertMs": { "type": "integer", "minimum": 10000 },
-        "leadMs": { "type": "integer", "minimum": 30000 }
-      }
+        "expertMs": {
+          "type": "integer",
+          "minimum": 10000,
+          "description": "Timeout for expert analysis in milliseconds"
+        },
+        "leadMs": {
+          "type": "integer",
+          "minimum": 30000,
+          "description": "Timeout for consolidation phases in milliseconds"
+        },
+        "formatterMs": {
+          "type": "integer",
+          "minimum": 10000,
+          "description": "Timeout for formatting prose in milliseconds"
+        }
+      },
+      "additionalProperties": false
     },
-    "maxDraftPlanLength": { "type": "integer", "minimum": 1000 },
-    "maxHistorySessions": { "type": "integer", "minimum": 1, "maximum": 100 },
-    "databasePath": { "type": "string" }
+    "maxTokens": {
+      "type": "object",
+      "description": "Token limits for API calls",
+      "properties": {
+        "experts": {
+          "type": "integer",
+          "minimum": 100,
+          "description": "Max tokens per expert analysis"
+        },
+        "lead": {
+          "type": "integer",
+          "minimum": 100,
+          "description": "Max tokens for consolidation phases"
+        }
+      },
+      "additionalProperties": false
+    },
+    "maxDraftPlanLength": {
+      "type": "integer",
+      "minimum": 1000,
+      "description": "Maximum length of draft plan input in characters"
+    },
+    "maxHistorySessions": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 100,
+      "description": "Maximum number of session history entries to retain"
+    },
+    "databasePath": {
+      "type": "string",
+      "description": "Path to SQLite database file for session storage"
+    },
+    "cacheTtlSeconds": {
+      "type": "integer",
+      "minimum": 60,
+      "description": "Cache time-to-live in seconds for persona data"
+    },
+    "formatter": {
+      "type": "object",
+      "description": "Formatter service configuration",
+      "properties": {
+        "maxRetries": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 10,
+          "description": "Maximum retries for formatting failures"
+        }
+      },
+      "additionalProperties": false
+    }
   },
-  "required": ["personas"]
+  "required": ["personas"],
+  "additionalProperties": false
 }

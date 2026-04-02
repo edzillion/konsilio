@@ -42,6 +42,7 @@ export interface CouncilConfig {
     lead: string;
     formatter: string;
   };
+  personaModels: Record<string, string>;
   timeouts: {
     expertMs: number;
     leadMs: number;
@@ -62,9 +63,12 @@ export interface CouncilParams {
 }
 
 export interface CouncilOptions {
-  modelOverride?: {
-    experts?: string;
-    consolidation?: string;
+  personaOverride?: string[];
+  personaModelsOverride?: Record<string, string>;
+  consolidationModelOverride?: string;
+  maxTokensOverride?: {
+    experts?: number;
+    lead?: number;
   };
 }
 
@@ -86,6 +90,38 @@ export class CouncilService {
   ) {}
 
   /**
+   * Resolve the model for a specific persona using 3-tier resolution:
+   * 1. Per-run override (personaModelsOverride)
+   * 2. Persona-level default (config.personaModels)
+   * 3. Global default (config.models.experts)
+   */
+  private resolvePersonaModel(personaId: string, options?: CouncilOptions): string {
+    // Tier 1: Per-run override
+    if (options?.personaModelsOverride?.[personaId]) {
+      return options.personaModelsOverride[personaId];
+    }
+    // Tier 2: Persona-level default in config
+    if (this.deps.config.personaModels?.[personaId]) {
+      return this.deps.config.personaModels[personaId];
+    }
+    // Tier 3: Global default
+    return this.deps.config.models.experts;
+  }
+
+  /**
+   * Resolve the effective token limit for a role
+   */
+  private resolveMaxTokens(role: 'experts' | 'lead', options?: CouncilOptions): number {
+    if (role === 'experts' && options?.maxTokensOverride?.experts) {
+      return options.maxTokensOverride.experts;
+    }
+    if (role === 'lead' && options?.maxTokensOverride?.lead) {
+      return options.maxTokensOverride.lead;
+    }
+    return this.deps.config.maxTokens[role];
+  }
+
+  /**
    * Run a council analysis with two-stage consolidation
    */
   async run(params: CouncilParams, options?: CouncilOptions, correlationId?: string): Promise<CouncilResult> {
@@ -100,20 +136,28 @@ export class CouncilService {
       throw new Error(`draft_plan too long (${params.draftPlan.length}/${this.deps.config.maxDraftPlanLength} chars)`);
     }
 
-    const expertModel = options?.modelOverride?.experts ?? this.deps.config.models.experts;
-    const consolidationModel = options?.modelOverride?.consolidation ?? this.deps.config.models.lead;
+    // Resolve effective personas: per-run override or config defaults
+    const effectivePersonaIds = options?.personaOverride ?? this.deps.config.enabledPersonaIds;
 
-    const personas = this.deps.personaService.createExperts(
-      this.deps.config.enabledPersonaIds,
-      expertModel
-    );
+    // Resolve consolidation model: per-run override or config default
+    const consolidationModel = options?.consolidationModelOverride ?? this.deps.config.models.lead;
 
-    if (personas.length < 2) throw new Error(`At least 2 personas required. Found: ${this.deps.config.enabledPersonaIds.join(', ')}`);
+    // Create personas with per-persona model resolution (3-tier)
+    const personas = effectivePersonaIds.map((id) => {
+      const model = this.resolvePersonaModel(id, options);
+      return this.deps.personaService.createExpert(id, model);
+    });
+
+    if (personas.length < 2) throw new Error(`At least 2 personas required. Found: ${effectivePersonaIds.join(', ')}`);
 
     // Stage 1: Expert Analysis (parallel, prose output)
     log.debug('Stage 1: Expert Analysis (prose)');
     const userMessage = this.buildUserMessage(params);
-    const expertPromises = personas.map((p) => this.callExpert(p, expertModel, userMessage, this.deps.config.timeouts.expertMs, log));
+    const expertPromises = personas.map((p) => {
+      const model = this.resolvePersonaModel(p.id, options);
+      const maxTokens = this.resolveMaxTokens('experts', options);
+      return this.callExpert(p, model, userMessage, this.deps.config.timeouts.expertMs, maxTokens, log);
+    });
     const expertResults = await Promise.allSettled(expertPromises);
 
     const successfulProseReports: { persona: Persona; prose: string; durationMs: number }[] = [];
@@ -191,10 +235,16 @@ export class CouncilService {
     log.debug('Stage 6: Synthesis');
     const synthesisOutput = await this.runSynthesisPhase(successfulReports, decisionOutput, params, consolidationModel, log);
 
+    // Build model summary: show which models were used per persona
+    const modelSummary = personas.map(p => {
+      const model = this.resolvePersonaModel(p.id, options);
+      return `${p.id}:${model}`;
+    }).join(', ');
+
     const totalDurationMs = Date.now() - totalStart;
     let output = failedExperts.length > 0 ? `> ⚠️ ${failedExperts.length} expert(s) failed\n\n` : '';
     output += `> 📝 Formatted: ${(formattingDetails.formattingSuccessRate * 100).toFixed(0)}% success (${(formattingDetails.totalFormattingTimeMs / 1000).toFixed(1)}s)\n`;
-    output += `> 👑 Council: ${successfulReports.length} experts (${expertModel}) → 4-phase consolidation (${consolidationModel})\n`;
+    output += `> 👑 Council: ${successfulReports.length} experts [${modelSummary}] → 4-phase consolidation (${consolidationModel})\n`;
     output += `> ⏱️ ${(totalDurationMs / 1000).toFixed(1)}s | Accepted: ${decisionOutput.acceptedCount} | Rejected: ${decisionOutput.rejectedCount}\n\n---\n\n`;
     output += synthesisOutput.blueprint;
 
@@ -224,7 +274,7 @@ export class CouncilService {
   /**
    * Call an expert persona for prose analysis
    */
-  private async callExpert(persona: Persona, model: string, userMessage: string, timeoutMs: number, log: Logger | CorrelatedLogger): Promise<{ persona: Persona; prose: string; durationMs: number }> {
+  private async callExpert(persona: Persona, model: string, userMessage: string, timeoutMs: number, maxTokens: number, log: Logger | CorrelatedLogger): Promise<{ persona: Persona; prose: string; durationMs: number }> {
     const start = Date.now();
     const messages: Message[] = [
       { role: 'system', content: persona.systemPrompt },
@@ -235,15 +285,15 @@ export class CouncilService {
       const rawContent = await this.deps.openRouterService.call({
         model,
         messages,
-        maxTokens: 4096,
+        maxTokens,
         temperature: 0.3,
         timeoutMs
       });
 
-      log.debug('Expert prose analysis complete', { personaId: persona.id, contentLength: rawContent.length });
+      log.debug('Expert prose analysis complete', { personaId: persona.id, model, contentLength: rawContent.length });
       return { persona, prose: rawContent, durationMs: Date.now() - start };
     } catch (err) {
-      log.error('Expert analysis failed', { personaId: persona.id, error: err instanceof Error ? err.message : String(err) });
+      log.error('Expert analysis failed', { personaId: persona.id, model, error: err instanceof Error ? err.message : String(err) });
       throw new Error(`${persona.name} failed: ${err instanceof Error ? err.message : String(err)}`);
     }
   }
