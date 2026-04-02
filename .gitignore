@@ -6,3 +6,6 @@ data/
 
 # User config (customize locally, commit if desired)
 # konsilio.json
+
+# Coverage reports
+coverage/
