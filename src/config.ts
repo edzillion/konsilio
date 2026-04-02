@@ -80,9 +80,11 @@ interface KonsilioConfig {
 }
 
 function loadKonsilioConfig(): KonsilioConfig {
-  // Resolve relative to this file's location (works in both src/ and build/)
+  // Search order: project root first, then package directory
+  // This allows consuming projects to override package defaults
   const candidates = [
-    resolve(__dirname, "..", "konsilio.json"),
+    resolve(process.cwd(), "konsilio.json"),      // Project root (consuming project)
+    resolve(__dirname, "..", "konsilio.json"),    // Package directory (defaults)
   ];
   
   for (const configPath of candidates) {
