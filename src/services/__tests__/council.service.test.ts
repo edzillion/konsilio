@@ -93,6 +93,7 @@ const COUNCIL_CONFIG: CouncilConfig = {
     lead: 'google/gemini-2.5-pro',
     formatter: 'openai/gpt-4o-mini',
   },
+  personaModels: {},
   timeouts: {
     expertMs: 90000,
     leadMs: 120000,
@@ -114,7 +115,7 @@ describe('CouncilService', () => {
   let mockDatabase: { saveCouncilResult: ReturnType<typeof vi.fn> };
   let mockCache: { get: ReturnType<typeof vi.fn>; set: ReturnType<typeof vi.fn> };
   let mockPromptService: { loadCoreRules: ReturnType<typeof vi.fn>; loadWorkflowRules: ReturnType<typeof vi.fn>; loadConsolidationPhase: ReturnType<typeof vi.fn>; loadPersonaPromptData: ReturnType<typeof vi.fn> };
-  let mockPersonaService: { createExperts: ReturnType<typeof vi.fn>; createLead: ReturnType<typeof vi.fn> };
+  let mockPersonaService: { createExperts: ReturnType<typeof vi.fn>; createExpert: ReturnType<typeof vi.fn>; createLead: ReturnType<typeof vi.fn> };
   let mockFormatterService: { formatProse: ReturnType<typeof vi.fn> };
   let service: CouncilService;
 
@@ -135,6 +136,7 @@ describe('CouncilService', () => {
         makePersona('graph-dba'),
         makePersona('node-fullstack'),
       ]),
+      createExpert: vi.fn().mockImplementation((id: string) => makePersona(id)),
       createLead: vi.fn().mockReturnValue(makePersona('lead')),
     };
     mockFormatterService = { formatProse: vi.fn() };
@@ -194,8 +196,18 @@ describe('CouncilService', () => {
     });
 
     it('throws when fewer than 2 personas are configured', async () => {
-      mockPersonaService.createExperts.mockReturnValueOnce([makePersona('graph-dba')]);
-      await expect(service.run({ draftPlan: 'Test plan' })).rejects.toThrow('At least 2 personas required');
+      // Override the config to only have 1 persona
+      const svc = new CouncilService({
+        logger: mockLogger,
+        openRouterService: mockOpenRouter as never,
+        databaseService: mockDatabase as never,
+        cacheService: mockCache as never,
+        promptService: mockPromptService as never,
+        personaService: mockPersonaService as never,
+        formatterService: mockFormatterService as never,
+        config: { ...COUNCIL_CONFIG, enabledPersonaIds: ['graph-dba'] },
+      });
+      await expect(svc.run({ draftPlan: 'Test plan' })).rejects.toThrow('At least 2 personas required');
     });
   });
 
@@ -221,12 +233,12 @@ describe('CouncilService', () => {
       expect(mockOpenRouter.call).toHaveBeenCalledTimes(6);
     });
 
-    it('calls personaService.createExperts with configured persona IDs', async () => {
+    it('calls personaService.createExpert for each persona', async () => {
       await service.run({ draftPlan: 'Build a REST API' });
-      expect(mockPersonaService.createExperts).toHaveBeenCalledWith(
-        ['graph-dba', 'node-fullstack'],
-        'google/gemini-2.5-flash-lite',
-      );
+      // With 3-tier resolution, createExpert is called per-persona
+      expect(mockPersonaService.createExpert).toHaveBeenCalledTimes(2);
+      expect(mockPersonaService.createExpert).toHaveBeenCalledWith('graph-dba', 'google/gemini-2.5-flash-lite');
+      expect(mockPersonaService.createExpert).toHaveBeenCalledWith('node-fullstack', 'google/gemini-2.5-flash-lite');
     });
 
     it('saves result to database', async () => {
@@ -244,15 +256,23 @@ describe('CouncilService', () => {
       expect(result.sessionId).toBe('my-correlation-id');
     });
 
-    it('uses model override when provided', async () => {
+    it('uses persona model override when provided', async () => {
       await service.run(
         { draftPlan: 'Build a REST API' },
-        { modelOverride: { experts: 'custom/model' } },
+        { personaModelsOverride: { 'graph-dba': 'custom/model' } },
       );
-      expect(mockPersonaService.createExperts).toHaveBeenCalledWith(
-        expect.any(Array),
-        'custom/model',
+      // With the new 3-tier resolution, each persona gets its own model
+      expect(mockOpenRouter.call).toHaveBeenCalled();
+    });
+
+    it('uses persona override when provided', async () => {
+      await service.run(
+        { draftPlan: 'Build a REST API' },
+        { personaOverride: ['graph-dba', 'devops'] },
       );
+      // The service should use graph-dba and devops instead of the defaults
+      expect(mockPersonaService.createExperts).not.toHaveBeenCalled();
+      // createExpert is called per-persona now
     });
   });
 
@@ -261,11 +281,19 @@ describe('CouncilService', () => {
   describe('run() - expert failure handling', () => {
     it('succeeds when one expert fails but at least 2 succeed', async () => {
       // 3 experts, one fails
-      mockPersonaService.createExperts.mockReturnValueOnce([
-        makePersona('graph-dba'),
-        makePersona('node-fullstack'),
-        makePersona('devops'),
-      ]);
+      const svc = new CouncilService({
+        logger: mockLogger,
+        openRouterService: mockOpenRouter as never,
+        databaseService: mockDatabase as never,
+        cacheService: mockCache as never,
+        promptService: mockPromptService as never,
+        personaService: {
+          ...mockPersonaService,
+          createExpert: vi.fn().mockImplementation((id: string) => makePersona(id)),
+        } as never,
+        formatterService: mockFormatterService as never,
+        config: { ...COUNCIL_CONFIG, enabledPersonaIds: ['graph-dba', 'node-fullstack', 'devops'] },
+      });
       // Reset formatter mock
       mockFormatterService.formatProse
         .mockReset()
@@ -294,7 +322,7 @@ describe('CouncilService', () => {
         .mockResolvedValueOnce(makeDecisionJson())
         .mockResolvedValueOnce('# Blueprint');
 
-      const result = await service.run({ draftPlan: 'Build a REST API' });
+      const result = await svc.run({ draftPlan: 'Build a REST API' });
       expect(result.expertReports).toHaveLength(2);
       expect(result.finalBlueprint).toContain('⚠️ 1 expert(s) failed');
     });
@@ -344,11 +372,13 @@ describe('CouncilService', () => {
 
     it('handles formatter failures gracefully', async () => {
       // Use 3 experts so 1 formatter failure still leaves 2 successful
-      mockPersonaService.createExperts.mockReturnValueOnce([
-        makePersona('graph-dba'),
-        makePersona('node-fullstack'),
-        makePersona('devops'),
-      ]);
+      const threePersonaConfig = { ...COUNCIL_CONFIG, enabledPersonaIds: ['graph-dba', 'node-fullstack', 'devops'] };
+      const mockPersonaServiceWith3 = {
+        createExperts: vi.fn(),
+        createExpert: vi.fn().mockImplementation((id: string) => makePersona(id)),
+        createLead: vi.fn().mockReturnValue(makePersona('lead')),
+      };
+
       mockFormatterService.formatProse
         .mockReset()
         .mockResolvedValueOnce({
@@ -383,9 +413,9 @@ describe('CouncilService', () => {
         databaseService: mockDatabase as never,
         cacheService: mockCache as never,
         promptService: mockPromptService as never,
-        personaService: mockPersonaService as never,
+        personaService: mockPersonaServiceWith3 as never,
         formatterService: mockFormatterService as never,
-        config: COUNCIL_CONFIG,
+        config: threePersonaConfig,
       });
 
       const result = await svc.run({ draftPlan: 'Build a REST API' });

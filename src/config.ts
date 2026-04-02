@@ -60,6 +60,7 @@ interface KonsilioConfig {
     lead?: string;
     formatter?: string;
   };
+  personaModels?: Record<string, string>;
   timeouts?: {
     expertMs?: number;
     leadMs?: number;
@@ -123,6 +124,9 @@ export const config = {
     lead: konsilioConfig.models?.lead ?? "google/gemini-2.5-pro",
     formatter: konsilioConfig.models?.formatter ?? "openai/gpt-4o-mini",
   },
+
+  // Persona-level model defaults (personaId -> model)
+  personaModels: konsilioConfig.personaModels ?? {},
 
   // Timeout Configuration
   timeouts: {

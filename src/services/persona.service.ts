@@ -87,9 +87,9 @@ export class PersonaService {
   }
 
   /**
-   * Create a single expert persona (private implementation detail)
+   * Create a single expert persona
    */
-  private createExpert(personaId: string, model: string): Persona {
+  createExpert(personaId: string, model: string): Persona {
     const cacheKey = `expert:${personaId}:${model}`;
     
     // Check cache
