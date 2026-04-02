@@ -2,6 +2,18 @@
 
 ## [0.3.0] - Unreleased
 
+### Folder Structure & Build Improvements
+
+- **Runtime data directory**: All runtime artifacts now live under `data/`:
+  - `data/db/` — SQLite database files (`konsilio.db`, `.db-shm`, `.db-wal`)
+  - `data/personas/` — User-editable persona markdown files
+  - `data/prompts/` — Consolidation phase prompts and other templates
+- **Build script**: Added `scripts/copy-prompts.mjs` to copy `src/prompts/` → `data/prompts/` during build
+- **Prompt resolution**: `PromptService` now prefers `data/prompts/` at runtime, falls back to `src/prompts/` during development
+- **Database path**: Updated default from `./data/konsilio.db` to `./data/db/konsilio.db`
+- **Schema fix**: Removed hardcoded persona ID enum from `konsilio.schema.json` — persona IDs are now dynamic (supports custom personas)
+- **Cleanup**: Removed old `council.db` files (renamed to `konsilio.db`)
+
 ### Layered Configuration (Config Design v1)
 
 Implement three-tier configuration system: Infrastructure → Profile → Run-time.
