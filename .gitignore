@@ -13,3 +13,5 @@ coverage/
 docs/
 
 # Cline
+.clinerules
+.clineignore
