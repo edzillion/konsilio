@@ -13,6 +13,7 @@
 - **Database path**: Updated default from `./data/konsilio.db` to `./data/db/konsilio.db`
 - **Schema fix**: Removed hardcoded persona ID enum from `konsilio.schema.json` — persona IDs are now dynamic (supports custom personas)
 - **Cleanup**: Removed old `council.db` files (renamed to `konsilio.db`)
+- **Schema distribution**: Added `konsilio.schema.json` to npm package exports so consuming projects can reference it via `node_modules/konsilio/konsilio.schema.json`
 
 ### Layered Configuration (Config Design v1)
 
