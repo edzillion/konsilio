@@ -65,6 +65,10 @@ interface KonsilioConfig {
     leadMs?: number;
     formatterMs?: number;
   };
+  maxTokens?: {
+    experts?: number;
+    lead?: number;
+  };
   maxDraftPlanLength?: number;
   maxHistorySessions?: number;
   databasePath?: string;
@@ -129,6 +133,12 @@ export const config = {
 
   // Formatter retries
   formatterMaxRetries: konsilioConfig.formatter?.maxRetries ?? 3,
+
+  // Token limits
+  maxTokens: {
+    experts: konsilioConfig.maxTokens?.experts ?? 4096,
+    lead: konsilioConfig.maxTokens?.lead ?? 16384,
+  },
 
   // Limits
   maxDraftPlanLength: konsilioConfig.maxDraftPlanLength ?? 12000,

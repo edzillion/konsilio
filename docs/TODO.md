@@ -1,2 +1,3 @@
 - [x] Turn shared-prompts.ts into a service
-- [ ] Implement vitest unit testing 
+- [x] Implement vitest unit testing 
+- [ ] max tokens is hardcoded, lots of hardcoding to be fixed. 

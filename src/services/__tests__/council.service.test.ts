@@ -59,7 +59,7 @@ function makeExpertOutputJson(personaId: string, findingId = `finding-${personaI
 /** Valid ExtractionPhaseOutput JSON string */
 function makeExtractionJson(): string {
   const output: ExtractionPhaseOutput = {
-    claims: [{ id: 'claim-1', personaId: 'graph-dba', findingId: 'finding-graph-dba', claim: 'Test claim', context: 'ctx' }],
+    claims: [{ id: 'claim-1', personaId: 'graph-dba', findingId: 'finding-graph-dba', claim: 'Test claim', context: { id: 'finding-graph-dba' } }],
     totalFindings: 1,
   };
   return JSON.stringify(output);
@@ -97,6 +97,10 @@ const COUNCIL_CONFIG: CouncilConfig = {
     expertMs: 90000,
     leadMs: 120000,
     formatterMs: 30000,
+  },
+  maxTokens: {
+    experts: 4096,
+    lead: 16384,
   },
   maxDraftPlanLength: 12000,
   formatterMaxRetries: 3,
