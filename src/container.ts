@@ -68,7 +68,9 @@ export async function createServices(): Promise<AppServices> {
   const councilConfig: CouncilConfig = {
     enabledPersonaIds: config.enabledPersonas!,
     models: config.models,
+    personaModels: config.personaModels,
     timeouts: config.timeouts,
+    maxTokens: config.maxTokens,
     maxDraftPlanLength: config.maxDraftPlanLength,
     formatterMaxRetries: config.formatterMaxRetries,
   };

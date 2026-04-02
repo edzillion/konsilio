@@ -34,8 +34,14 @@ export class PromptService {
   private readonly logger: Logger;
 
   constructor(config: PromptServiceConfig | undefined, logger: Logger) {
-    // Resolve prompts relative to this file's location (works in both src/ and build/)
-    this.promptsDir = config?.promptsDir ?? join(__dirname, '..', 'prompts');
+    // Resolve prompts relative to project root (data/prompts/ at runtime)
+    // During development, falls back to src/prompts/ if data/prompts/ doesn't exist
+    const projectRoot = join(__dirname, '..', '..');
+    const dataPrompts = join(projectRoot, 'data', 'prompts');
+    const srcPrompts = join(__dirname, '..', 'prompts');
+    
+    // Prefer data/prompts/ (runtime), fall back to src/prompts/ (development)
+    this.promptsDir = config?.promptsDir ?? (existsSync(dataPrompts) ? dataPrompts : srcPrompts);
     this.logger = logger;
   }
 

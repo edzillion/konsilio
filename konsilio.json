@@ -9,12 +9,17 @@
     "experts": "google/gemini-2.5-flash-lite",
     "lead": "google/gemini-2.5-pro"
   },
+  "personaModels": {},
   "timeouts": {
     "expertMs": 90000,
     "leadMs": 120000
   },
+  "maxTokens": {
+    "experts": 16384,
+    "lead": 32768
+  },
   "maxDraftPlanLength": 12000,
   "maxHistorySessions": 10,
-  "databasePath": "./data/konsilio.db",
+  "databasePath": "./data/db/konsilio.db",
   "cacheTtlSeconds": 3600
 }

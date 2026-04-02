@@ -60,10 +60,15 @@ interface KonsilioConfig {
     lead?: string;
     formatter?: string;
   };
+  personaModels?: Record<string, string>;
   timeouts?: {
     expertMs?: number;
     leadMs?: number;
     formatterMs?: number;
+  };
+  maxTokens?: {
+    experts?: number;
+    lead?: number;
   };
   maxDraftPlanLength?: number;
   maxHistorySessions?: number;
@@ -75,9 +80,11 @@ interface KonsilioConfig {
 }
 
 function loadKonsilioConfig(): KonsilioConfig {
-  // Resolve relative to this file's location (works in both src/ and build/)
+  // Search order: project root first, then package directory
+  // This allows consuming projects to override package defaults
   const candidates = [
-    resolve(__dirname, "..", "konsilio.json"),
+    resolve(process.cwd(), "konsilio.json"),      // Project root (consuming project)
+    resolve(__dirname, "..", "konsilio.json"),    // Package directory (defaults)
   ];
   
   for (const configPath of candidates) {
@@ -120,6 +127,9 @@ export const config = {
     formatter: konsilioConfig.models?.formatter ?? "openai/gpt-4o-mini",
   },
 
+  // Persona-level model defaults (personaId -> model)
+  personaModels: konsilioConfig.personaModels ?? {},
+
   // Timeout Configuration
   timeouts: {
     expertMs: konsilioConfig.timeouts?.expertMs ?? 90_000,
@@ -129,6 +139,12 @@ export const config = {
 
   // Formatter retries
   formatterMaxRetries: konsilioConfig.formatter?.maxRetries ?? 3,
+
+  // Token limits
+  maxTokens: {
+    experts: konsilioConfig.maxTokens?.experts ?? 4096,
+    lead: konsilioConfig.maxTokens?.lead ?? 16384,
+  },
 
   // Limits
   maxDraftPlanLength: konsilioConfig.maxDraftPlanLength ?? 12000,

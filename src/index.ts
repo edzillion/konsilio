@@ -34,7 +34,13 @@ The council uses a 4-phase consolidation pipeline:
 4. Decision (accept/reject findings)
 5. Synthesis (assemble final blueprint)
 
-Use 'list_personas' to see all available personas. Enable personas in konsilio.json.`,
+Use 'list_personas' to see all available personas. Enable personas in konsilio.json.
+
+Run-time overrides (optional):
+- personas: Override enabled personas for this run only
+- persona_models: Override model per persona (personaId -> model)
+- consolidation_model: Override the lead/consolidation model
+- max_tokens: Override token limits per run (experts, lead)`,
   {
     draft_plan: z.string().describe(
       "The architecture plan or design to analyze."
@@ -44,6 +50,22 @@ Use 'list_personas' to see all available personas. Enable personas in konsilio.j
     ),
     context_constraints: z.string().optional().describe(
       "Runtime constraints, e.g. 'Must run on Proxmox LXC', 'No external deps'"
+    ),
+    // Run-time overrides
+    personas: z.array(z.string()).optional().describe(
+      "Override enabled personas for this run only. Uses persona IDs from konsilio.json."
+    ),
+    persona_models: z.record(z.string(), z.string()).optional().describe(
+      "Override model per persona. Maps personaId -> model ID."
+    ),
+    consolidation_model: z.string().optional().describe(
+      "Override the lead/consolidation model for this run."
+    ),
+    max_tokens: z.object({
+      experts: z.number().optional(),
+      lead: z.number().optional(),
+    }).optional().describe(
+      "Override token limits for this run. Experts: per-persona max, Lead: consolidation max."
     ),
   },
   async (params) => {
@@ -73,6 +95,12 @@ Use 'list_personas' to see all available personas. Enable personas in konsilio.j
           draftPlan,
           techStack: params.tech_stack,
           contextConstraints: params.context_constraints,
+        },
+        {
+          personaOverride: params.personas,
+          personaModelsOverride: params.persona_models,
+          consolidationModelOverride: params.consolidation_model,
+          maxTokensOverride: params.max_tokens,
         }
       );
 

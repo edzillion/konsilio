@@ -3,6 +3,10 @@ build/
 data/
 .env
 *.log
+.vscode/
 
 # User config (customize locally, commit if desired)
 # konsilio.json
+
+# Coverage reports
+coverage/

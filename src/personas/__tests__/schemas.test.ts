@@ -166,7 +166,7 @@ describe('ExtractionPhaseOutputSchema', () => {
           personaId: 'security',
           findingId: 'finding-1',
           claim: 'Missing rate limiting',
-          context: 'Auth endpoint',
+          context: { id: 'finding-1', severity: 'HIGH', component: 'Auth endpoint' },
         },
       ],
       totalFindings: 1,

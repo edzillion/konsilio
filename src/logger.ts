@@ -1,7 +1,8 @@
 /**
  * Pino-based Structured Logger with correlation ID support
  * 
- * Outputs structured JSON logs to stdout for observability and debugging.
+ * Outputs structured JSON logs to stderr for observability and debugging.
+ * IMPORTANT: MCP servers MUST use stderr for logs - stdout is reserved for JSON-RPC protocol.
  */
 
 import pino from 'pino';
@@ -75,13 +76,17 @@ class PinoLogger implements Logger {
   protected readonly pino: pino.Logger;
 
   constructor(level?: LogLevel) {
-    this.pino = pino({
-      level: level ?? getLogLevelFromEnv(),
-      base: {
-        service: 'konsilio',
+    this.pino = pino(
+      {
+        level: level ?? getLogLevelFromEnv(),
+        base: {
+          service: 'konsilio',
+        },
+        timestamp: pino.stdTimeFunctions.isoTime,
       },
-      timestamp: pino.stdTimeFunctions.isoTime,
-    });
+      // MCP servers MUST log to stderr - stdout is reserved for JSON-RPC protocol
+      pino.destination({ dest: 2, sync: true })
+    );
   }
 
   debug(message: string, data?: Record<string, unknown>, correlationId?: string): void {
