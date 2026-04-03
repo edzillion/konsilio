@@ -47,9 +47,20 @@ jobs:
 
       - name: Delete existing tag if present
         run: |
-          VERSION=$(node -p "require('./package.json').version")
-          git tag -d "v$VERSION" 2>/dev/null || true
-          git push --delete origin "v$VERSION" 2>/dev/null || true
+          BUMP="${{ github.event.inputs.version || 'patch' }}"
+          CURRENT=$(node -p "require('./package.json').version")
+          NEW=$(node -p "
+            const semver = require('semver');
+            semver.inc('$CURRENT', '$BUMP');
+          " 2>/dev/null || node -e "
+            const [major, minor, patch] = '$CURRENT'.split('.').map(Number);
+            if ('$BUMP' === 'major') console.log(\`\${major+1}.0.0\`);
+            else if ('$BUMP' === 'minor') console.log(\`${major}.\${minor+1}.0\`);
+            else console.log(\`${major}.\${minor}.\${patch+1}\`);
+          ")
+          echo "Deleting tag v$NEW (bumping $CURRENT by $BUMP)"
+          git tag -d "v$NEW" 2>/dev/null || true
+          git push --delete origin "v$NEW" 2>/dev/null || true
 
       - name: Bump version
         run: npm version ${{ github.event.inputs.version || 'patch' }}
