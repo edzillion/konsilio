@@ -2,6 +2,12 @@
 
 **Council of Experts** — an MCP server that runs draft plans through a multi-persona architectural review before you write a single line of code.
 
+## TL;DR
+
+Konsilio lets you run a draft plan through a panel of AI experts (security, performance, DevOps, etc.) before writing code.
+
+It returns a structured blueprint so your coding model can implement it cleanly in one pass.
+
 ## The Problem
 
 You're mid-task and realize you need a plan: *"Why is this code not working? We need more logs → logging should be added → let me write a proposal for logging."*
@@ -17,7 +23,49 @@ Konsilio implements a **two-stage consulting pipeline**:
 3. **4-phase consolidation** — a lead agent extracts claims, critiques contradictions, makes accept/reject decisions, and synthesizes a final blueprint
 4. **Implement with a clean slate** — hand the blueprint to a coding-focused model. It starts with empty context and executes the plan in one pass
 
-**Rinse. Repeat. Rewind if needed.**
+**Rinse. Repeat. Rewind Selectah!**
+
+## Usage
+
+```bash
+# Install
+npm install -g konsilio
+
+# Configure (edit konsilio.json with your personas and models)
+# Set OPENROUTER_API_KEY in your environment
+
+# Use via MCP in your AI coding tool
+# Tool: consult_council
+# Params: draft_plan, tech_stack (optional), context_constraints (optional)
+```
+
+### Example
+
+```json
+{
+  "draft_plan": "Add structured logging to all API endpoints with correlation IDs",
+  "tech_stack": "Node.js, Express, Pino, PostgreSQL",
+  "context_constraints": "Must run on Proxmox LXC, no external dependencies"
+}
+```
+
+Returns a blueprint with architecture directives, edge cases, constraints, and numbered next steps.
+
+## Configuration
+
+```json
+{
+  "personas": {
+    "enabled": ["security", "performance", "devops", "test-architect"]
+  },
+  "models": {
+    "experts": "google/gemini-2.5-flash-lite",
+    "lead": "google/gemini-2.5-pro"
+  }
+}
+```
+
+Default personas: `security`, `performance`, `ux-dx`, `devops`, `typescript`, `graph-dba`, `node-fullstack`, `dev-tooling`, `distributed-systems`, `test-architect`
 
 ```mermaid
 flowchart TD
@@ -116,48 +164,6 @@ The lead agent runs a 4-phase consolidation pipeline:
 ### The Formatter
 
 A dedicated `gpt-4o-mini` instance converts expert prose to structured JSON using OpenAI's `response_format` feature. This keeps experts focused on analysis, not syntax.
-
-## Usage
-
-```bash
-# Install
-npm install -g konsilio
-
-# Configure (edit konsilio.json with your personas and models)
-# Set OPENROUTER_API_KEY in your environment
-
-# Use via MCP in your AI coding tool
-# Tool: consult_council
-# Params: draft_plan, tech_stack (optional), context_constraints (optional)
-```
-
-### Example
-
-```json
-{
-  "draft_plan": "Add structured logging to all API endpoints with correlation IDs",
-  "tech_stack": "Node.js, Express, Pino, PostgreSQL",
-  "context_constraints": "Must run on Proxmox LXC, no external dependencies"
-}
-```
-
-Returns a blueprint with architecture directives, edge cases, constraints, and numbered next steps.
-
-## Configuration
-
-```json
-{
-  "personas": {
-    "enabled": ["security", "performance", "devops", "test-architect"]
-  },
-  "models": {
-    "experts": "google/gemini-2.5-flash-lite",
-    "lead": "google/gemini-2.5-pro"
-  }
-}
-```
-
-Default personas: `security`, `performance`, `ux-dx`, `devops`, `typescript`, `graph-dba`, `node-fullstack`, `dev-tooling`, `distributed-systems`, `test-architect`
 
 # License
 
