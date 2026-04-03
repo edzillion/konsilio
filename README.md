@@ -1,9 +1,5 @@
 # Konsilio
 
-**Council of Experts** — an MCP server that runs draft plans through a multi-persona architectural review before you write a single line of code.
-
-## TL;DR
-
 Konsilio lets you run a draft plan through a panel of AI experts (security, performance, DevOps, etc.) before writing code.
 
 It returns a structured blueprint so your coding model can implement it cleanly in one pass.
