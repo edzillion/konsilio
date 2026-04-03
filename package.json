@@ -1,8 +1,36 @@
 {
   "name": "konsilio",
   "version": "0.3.0",
+  "description": "Konsilio MCP server runs draft plans through a multi-persona architectural review.",
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "code-review",
+    "architecture",
+    "ai",
+    "multi-agent",
+    "expert-system",
+    "planning",
+    "consulting",
+    "blueprint"
+  ],
+  "homepage": "https://github.com/edzillion/konsilio#readme",
+  "bugs": {
+    "url": "https://github.com/edzillion/konsilio/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/edzillion/konsilio.git"
+  },
+  "license": "Unlicense",
+  "author": "edzillion",
   "type": "module",
+  "exports": {
+    ".": "./build/index.js",
+    "./schema": "./konsilio.schema.json"
+  },
   "main": "build/index.js",
+  "types": "./build/index.d.ts",
   "bin": {
     "konsilio": "build/index.js"
   },
@@ -10,12 +38,8 @@
     "build/",
     "konsilio.schema.json"
   ],
-  "exports": {
-    ".": "./build/index.js",
-    "./schema": "./konsilio.schema.json"
-  },
   "scripts": {
-    "build": "tsc && node scripts/copy-assets.mjs",
+    "build": "tsc -p tsconfig.build.json && node scripts/copy-assets.mjs",
     "dev": "tsc --watch",
     "start": "node build/index.js",
     "start:server": "node build/server.js",
@@ -27,7 +51,6 @@
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage"
   },
-  "license": "MIT",
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.28.0",
     "pino": "^10.3.1",
