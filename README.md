@@ -16,7 +16,7 @@ You could feed that plan directly into a coding model and hope it gets it right.
 
 ## The Solution
 
-Konsilio implements a **two-stage consulting pipeline**:
+Konsilio implements a **multi-stage consulting pipeline**:
 
 1. **Write a proposal** — a short document describing what you want to build or change
 2. **Feed it to the Council** — multiple expert personas (security, performance, DevOps, testing, etc.) review the plan in parallel, each from their own angle
