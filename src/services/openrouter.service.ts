@@ -73,9 +73,23 @@ export class OpenRouterService {
 
     for (let attempt = 0; attempt < this.maxRetries; attempt++) {
       const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), opts.timeoutMs ?? 90_000);
+      // timeoutMs of 0 means unlimited (no abort timeout)
+      const timeoutMs = opts.timeoutMs ?? 90_000;
+      const timeout = timeoutMs > 0 ? setTimeout(() => controller.abort(), timeoutMs) : null;
 
       try {
+        const body: Record<string, unknown> = {
+          model: opts.model,
+          messages: opts.messages,
+          temperature: opts.temperature ?? 0.3,
+          ...(opts.responseFormat && { response_format: opts.responseFormat }),
+        };
+        // maxTokens of 0 means unlimited (omit from request, let model use its default)
+        const maxTokens = opts.maxTokens ?? 4096;
+        if (maxTokens > 0) {
+          body.max_tokens = maxTokens;
+        }
+
         const res = await fetch(`${this.baseUrl}/chat/completions`, {
           method: 'POST',
           headers: {
@@ -84,13 +98,7 @@ export class OpenRouterService {
             'HTTP-Referer': 'https://github.com/konsilio',
             'X-Title': 'Konsilio Council',
           },
-          body: JSON.stringify({
-            model: opts.model,
-            messages: opts.messages,
-            max_tokens: opts.maxTokens ?? 4096,
-            temperature: opts.temperature ?? 0.3,
-            ...(opts.responseFormat && { response_format: opts.responseFormat }),
-          }),
+          body: JSON.stringify(body),
           signal: controller.signal,
         });
 
@@ -114,7 +122,7 @@ export class OpenRouterService {
         return content;
       } catch (err: unknown) {
         if (err instanceof Error && err.name === 'AbortError') {
-          throw new Error(`Request timeout (>${(opts.timeoutMs ?? 90_000) / 1000}s).`);
+          throw new Error(`Request timeout (>${timeoutMs / 1000}s).`);
         }
         if (this.isRetryable(err) && attempt < this.maxRetries - 1) {
           this.logger.warn('Retrying OpenRouter call', { attempt: attempt + 1 }, correlationId);
@@ -123,7 +131,7 @@ export class OpenRouterService {
         }
         throw err;
       } finally {
-        clearTimeout(timeout);
+        if (timeout) clearTimeout(timeout);
       }
     }
 
