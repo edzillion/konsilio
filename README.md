@@ -57,11 +57,26 @@ Returns a blueprint with architecture directives, edge cases, constraints, and n
   "models": {
     "experts": "google/gemini-2.5-flash-lite",
     "lead": "google/gemini-2.5-pro"
+  },
+  "timeouts": {
+    "expertMs": 90000,
+    "leadMs": 120000
+  },
+  "maxTokens": {
+    "experts": 16384,
+    "lead": 32768
   }
 }
 ```
 
 Default personas: `security`, `performance`, `ux-dx`, `devops`, `typescript`, `graph-dba`, `node-fullstack`, `dev-tooling`, `distributed-systems`, `test-architect`
+
+**Timeouts & Token Limits:**
+- `timeouts.expertMs` — Timeout per expert call in ms (default: `90000`)
+- `timeouts.leadMs` — Timeout per consolidation phase in ms (default: `120000`)
+- `maxTokens.experts` — Max tokens per expert response (default: `4096`)
+- `maxTokens.lead` — Max tokens per consolidation phase (default: `16384`)
+- Set any value to `0` to treat as **unlimited** (no timeout / no token limit)
 
 ```mermaid
 flowchart TD
