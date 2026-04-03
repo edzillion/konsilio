@@ -1,5 +1,9 @@
 # Konsilio
 
+[![npm version](https://img.shields.io/npm/v/konsilio.svg)](https://www.npmjs.com/package/konsilio)
+[![npm downloads](https://img.shields.io/npm/dm/konsilio.svg)](https://www.npmjs.com/package/konsilio)
+[![license](https://img.shields.io/npm/l/konsilio.svg)](LICENSE.md)
+
 Konsilio lets you run a draft plan through a panel of AI experts (security, performance, DevOps, etc.) before writing code.
 
 It returns a structured blueprint so your coding model can implement it cleanly in one pass.
