@@ -4,6 +4,10 @@ import { fileURLToPath } from "node:url";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
+// ─── Default Personas ───
+
+const DEFAULT_PERSONAS = ["devops", "security", "performance"] as const;
+
 // ─── Type Definitions ───
 
 export type LogLevel = "debug" | "info" | "warn" | "error";
@@ -117,8 +121,8 @@ export const config = {
   isProduction: parseNodeEnv(env("NODE_ENV")) === "production",
   isDevelopment: parseNodeEnv(env("NODE_ENV")) === "development",
 
-  // Enabled persona IDs from config file (defaults to all if not specified)
-  enabledPersonas: konsilioConfig.personas?.enabled,
+  // Enabled persona IDs from config file (defaults to devops, security, performance if not specified)
+  enabledPersonas: konsilioConfig.personas?.enabled ?? [...DEFAULT_PERSONAS],
 
   // Model Configuration
   models: {
