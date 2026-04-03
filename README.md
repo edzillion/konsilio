@@ -10,7 +10,9 @@ It returns a structured blueprint so your coding model can implement it cleanly 
 
 ## The Problem
 
-You're mid-task and realize you need a plan: *"Why is this code not working? We need more logs → logging should be added → let me write a proposal for logging."*
+You're mid-task and realize you need a plan:
+
+*"Why is this code not working? We need more logs → logging should be added → let me write a proposal for logging."*
 
 You could feed that plan directly into a coding model and hope it gets it right. Or you could catch blind spots early by having specialists review it first.
 
