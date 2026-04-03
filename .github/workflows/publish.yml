@@ -49,7 +49,7 @@ jobs:
 
       - name: Push version bump
         run: |
-          git push origin main
+          git push origin master
           git push --tags
 
       - name: Build
