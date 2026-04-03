@@ -108,17 +108,22 @@ flowchart TD
 
 Each expert is a focused agent with a specific lens:
 
-| Persona | Focus |
-|---------|-------|
-| 🔒 Security | Auth, injection, rate limiting, data exposure |
-| ⚡ Performance | Bottlenecks, caching, query patterns, scaling |
-| 🚀 DevOps | Deployment, observability, infrastructure |
-| 🧪 Test Architect | Coverage, edge cases, testability |
-| 🎨 UX/DX | API design, developer experience, ergonomics |
-| 🛠️ Dev Tooling | Build pipeline, linting, CI/CD |
+| Persona | Focus | Config Name |
+|---------|-------|-------------|
+| 🔒 Security Architect | Auth, injection, rate limiting, data exposure, secrets lifecycle | `security` |
+| ⚡ Performance Engineer | Bottlenecks, caching, query patterns, scaling, cost efficiency | `performance` |
+| 🔧 DevOps Engineer | Deployment, observability, infrastructure, IaC, auto-scaling | `devops` |
+| 🧪 QA/Test Architect | Coverage, edge cases, testability, chaos engineering, contract testing | `test-architect` |
+| 🎨 UX/DX Designer | API design, developer experience, ergonomics, accessibility | `ux-dx` |
+| 🛠️ Developer Tooling Specialist | Build pipeline, CI/CD, code generation, test frameworks, monorepo | `dev-tooling` |
+| 📘 TypeScript Engineer | Static types, module boundaries, async flow, generics, compiler config | `typescript` |
+| 🚀 Node/TypeScript Fullstack Engineer | REST/GraphQL APIs, auth, middleware, WebSocket/SSE, error boundaries | `node-fullstack` |
+| 🕸️ Graph Data Modeler | Vertex-edge design, traversal performance, query patterns, schema evolution | `graph-dba` |
+| 🌐 Distributed Systems Engineer | Consensus, fault tolerance, messaging, event-driven, saga orchestration | `distributed-systems` |
 
 Experts output **prose** — free-form analysis without JSON constraints.
-**Note:** User-defined experts can be created by adding an `expert.md` file to `/data/personas/`
+
+**Note:** User-defined experts can be created by adding an `<expert-name>.md` file to `/data/personas/`
 
 ### The Lead
 

@@ -6,8 +6,13 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { join, dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { PromptService } from '../prompt.service.js';
 import type { Logger } from '../../logger.js';
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const fixturesDir = join(__dirname, '..', '..', '__fixtures__');
 
 function makeMockLogger(): Logger {
   return {
@@ -140,7 +145,9 @@ describe('PromptService', () => {
 
     it('handles YAML values with double quotes', () => {
       // Test that quoted scalar values are properly stripped
-      const data = service.loadPersonaPromptData('test-quoted');
+      // Use fixtures directory for test-only persona
+      const fixturesService = new PromptService({ promptsDir: fixturesDir }, logger);
+      const data = fixturesService.loadPersonaPromptData('test-quoted');
 
       // The test-quoted persona has quoted scalar values that should be unquoted
       expect(data.id).toBe('test-quoted');
