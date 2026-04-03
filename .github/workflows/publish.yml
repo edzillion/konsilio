@@ -45,6 +45,12 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
+      - name: Delete existing tag if present
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          git tag -d "v$VERSION" 2>/dev/null || true
+          git push --delete origin "v$VERSION" 2>/dev/null || true
+
       - name: Bump version
         run: npm version ${{ github.event.inputs.version || 'patch' }}
 
