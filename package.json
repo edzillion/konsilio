@@ -15,7 +15,7 @@
     "./schema": "./konsilio.schema.json"
   },
   "scripts": {
-    "build": "tsc && node -e \"require('fs').cpSync('src/prompts','build/prompts',{recursive:true});require('fs').cpSync('konsilio.json','build/konsilio.json');require('fs').cpSync('konsilio.schema.json','build/konsilio.schema.json')\"",
+    "build": "tsc && node scripts/copy-assets.mjs",
     "dev": "tsc --watch",
     "start": "node build/index.js",
     "start:server": "node build/server.js",
