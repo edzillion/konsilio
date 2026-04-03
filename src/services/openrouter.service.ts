@@ -73,7 +73,7 @@ export class OpenRouterService {
 
     for (let attempt = 0; attempt < this.maxRetries; attempt++) {
       const controller = new AbortController();
-      // timeoutMs of 0 means unlimited (no abort timeout)
+      // timeoutMs of 0 means unlimited (no abort timeout) - resolved by config.resolveTimeout()
       const timeoutMs = opts.timeoutMs ?? 90_000;
       const timeout = timeoutMs > 0 ? setTimeout(() => controller.abort(), timeoutMs) : null;
 

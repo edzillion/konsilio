@@ -20,6 +20,10 @@
           },
           "minItems": 2,
           "description": "Expert personas to include in council consultations. Must have at least 2. Built-in personas: security, performance, ux-dx, devops, typescript, graph-dba, node-fullstack, dev-tooling, distributed-systems, test-architect"
+        },
+        "_comment": {
+          "type": "string",
+          "description": "Optional comment for documentation purposes"
         }
       },
       "required": ["enabled"],
@@ -64,39 +68,49 @@
     },
     "timeouts": {
       "type": "object",
-      "description": "Timeout configuration for API calls",
+      "description": "Timeout configuration for API calls. Use 'unlimited' for no timeout.",
       "properties": {
         "expertMs": {
-          "type": "integer",
-          "minimum": 10000,
-          "description": "Timeout for expert analysis in milliseconds"
+          "oneOf": [
+            { "type": "integer", "minimum": 10000 },
+            { "type": "string", "enum": ["unlimited"] }
+          ],
+          "description": "Timeout for expert analysis in milliseconds. Use 'unlimited' for no timeout."
         },
         "leadMs": {
-          "type": "integer",
-          "minimum": 30000,
-          "description": "Timeout for consolidation phases in milliseconds"
+          "oneOf": [
+            { "type": "integer", "minimum": 30000 },
+            { "type": "string", "enum": ["unlimited"] }
+          ],
+          "description": "Timeout for consolidation phases in milliseconds. Use 'unlimited' for no timeout."
         },
         "formatterMs": {
-          "type": "integer",
-          "minimum": 10000,
-          "description": "Timeout for formatting prose in milliseconds"
+          "oneOf": [
+            { "type": "integer", "minimum": 10000 },
+            { "type": "string", "enum": ["unlimited"] }
+          ],
+          "description": "Timeout for formatting prose in milliseconds. Use 'unlimited' for no timeout."
         }
       },
       "additionalProperties": false
     },
     "maxTokens": {
       "type": "object",
-      "description": "Token limits for API calls",
+      "description": "Token limits for API calls. Use 'unlimited' for no limit.",
       "properties": {
         "experts": {
-          "type": "integer",
-          "minimum": 100,
-          "description": "Max tokens per expert analysis"
+          "oneOf": [
+            { "type": "integer", "minimum": 100 },
+            { "type": "string", "enum": ["unlimited"] }
+          ],
+          "description": "Max tokens per expert analysis. Use 'unlimited' for no limit."
         },
         "lead": {
-          "type": "integer",
-          "minimum": 100,
-          "description": "Max tokens for consolidation phases"
+          "oneOf": [
+            { "type": "integer", "minimum": 100 },
+            { "type": "string", "enum": ["unlimited"] }
+          ],
+          "description": "Max tokens for consolidation phases. Use 'unlimited' for no limit."
         }
       },
       "additionalProperties": false

@@ -43,11 +43,13 @@ export interface CouncilConfig {
     formatter: string;
   };
   personaModels: Record<string, string>;
+  // Timeouts are resolved to numeric ms (0 = no timeout) by config.resolveTimeout()
   timeouts: {
     expertMs: number;
     leadMs: number;
     formatterMs: number;
   };
+  // MaxTokens are resolved to numeric (0 = no limit) by config.resolveMaxTokens()
   maxTokens: {
     experts: number;
     lead: number;
