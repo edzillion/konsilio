@@ -65,9 +65,13 @@ jobs:
       - name: Bump version
         run: npm version ${{ github.event.inputs.version || 'patch' }}
 
+      - name: Add [skip ci] to version commit
+        run: |
+          git commit --amend -m "$(git log -1 --format='%s') [skip ci]"
+
       - name: Push version bump
         run: |
-          git push --tags
+          git push origin HEAD:release --tags
 
       - name: Build
         run: npm run build

@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.3.2] - 2026-04-03
+
+### CI/CD Fix
+
+- **Publish workflow**: Fixed duplicate version publish error by ensuring version bump commits are pushed back to the `release` branch (not just tags). The workflow now amends the version commit with `[skip ci]` to prevent infinite CI loops.
+
 ## [0.3.0] - Unreleased
 
 ### Folder Structure & Build Improvements
