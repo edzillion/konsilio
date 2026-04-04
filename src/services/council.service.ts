@@ -135,7 +135,13 @@ export class CouncilService {
 
     if (!params.draftPlan.trim()) throw new Error('draft_plan cannot be empty');
     if (params.draftPlan.length > this.deps.config.maxDraftPlanLength) {
-      throw new Error(`draft_plan too long (${params.draftPlan.length}/${this.deps.config.maxDraftPlanLength} chars)`);
+      throw new Error(
+        `draft_plan too long (${params.draftPlan.length}/${this.deps.config.maxDraftPlanLength} chars). ` +
+        `The document should NOT be summarized. Options: ` +
+        `1) Increase maxDraftPlanLength in konsilio.json, ` +
+        `2) Split into multiple focused consultations, ` +
+        `3) Remove non-essential sections`
+      );
     }
 
     // Resolve effective personas: per-run override or config defaults

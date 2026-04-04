@@ -118,7 +118,7 @@
     "maxDraftPlanLength": {
       "type": "integer",
       "minimum": 1000,
-      "description": "Maximum length of draft plan input in characters"
+      "description": "Maximum length of draft plan input in characters. The document sent to consult_council should NEVER be summarized by the agent. If the document exceeds this limit, inform the user of their options: increase this limit, split into multiple consultations, or remove non-essential sections."
     },
     "maxHistorySessions": {
       "type": "integer",
