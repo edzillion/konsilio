@@ -1,9 +1,10 @@
-# Konsilio
-
 > 🚨 **WARNING**
 > 
 > **This project is in early development and breaking changes are expected.**
+> 
 > It has only been properly tested on Cline in VScode so other stacks may not work as expected. 
+
+# Konsilio
 
 [![npm version](https://img.shields.io/npm/v/konsilio.svg)](https://www.npmjs.com/package/konsilio)
 [![npm downloads](https://img.shields.io/npm/dm/konsilio.svg)](https://www.npmjs.com/package/konsilio)
