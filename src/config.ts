@@ -13,6 +13,42 @@ const DEFAULT_PERSONAS = ["devops", "security", "performance"] as const;
 export type LogLevel = "debug" | "info" | "warn" | "error";
 export type NodeEnv = "development" | "production" | "test";
 
+/**
+ * TimeoutOrUnlimited - Use a positive number for a timeout, or 'unlimited' for no timeout.
+ * Only the string 'unlimited' means no timeout. The value 0 is NOT treated as unlimited.
+ */
+export type TimeoutOrUnlimited = number | 'unlimited';
+
+/**
+ * MaxTokensOrUnlimited - Use a positive number for a token limit, or 'unlimited' for no limit.
+ * Only the string 'unlimited' means no limit. The value 0 is NOT treated as unlimited.
+ */
+export type MaxTokensOrUnlimited = number | 'unlimited';
+
+/**
+ * Resolve a timeout value to milliseconds. Returns 0 to mean "no timeout" (no AbortController timer).
+ * - 'unlimited' -> 0 (no timeout)
+ * - positive number -> that value in ms
+ * - 0, negative, or any other value -> falls back to default
+ */
+export function resolveTimeout(value: TimeoutOrUnlimited, defaultMs: number): number {
+  if (value === 'unlimited') return 0;
+  if (typeof value === 'number' && value > 0) return value;
+  return defaultMs;
+}
+
+/**
+ * Resolve a maxTokens value. Returns 0 to mean "no limit" (omit from request).
+ * - 'unlimited' -> 0 (no limit)
+ * - positive number -> that value
+ * - 0, negative, or any other value -> falls back to default
+ */
+export function resolveMaxTokens(value: MaxTokensOrUnlimited, defaultTokens: number): number {
+  if (value === 'unlimited') return 0;
+  if (typeof value === 'number' && value > 0) return value;
+  return defaultTokens;
+}
+
 // ─── CLI Args Parsing ───
 
 // Parse CLI args: --api-key=xxx
@@ -66,13 +102,13 @@ interface KonsilioConfig {
   };
   personaModels?: Record<string, string>;
   timeouts?: {
-    expertMs?: number;
-    leadMs?: number;
-    formatterMs?: number;
+    expertMs?: TimeoutOrUnlimited;
+    leadMs?: TimeoutOrUnlimited;
+    formatterMs?: TimeoutOrUnlimited;
   };
   maxTokens?: {
-    experts?: number;
-    lead?: number;
+    experts?: MaxTokensOrUnlimited;
+    lead?: MaxTokensOrUnlimited;
   };
   maxDraftPlanLength?: number;
   maxHistorySessions?: number;
@@ -134,20 +170,20 @@ export const config = {
   // Persona-level model defaults (personaId -> model)
   personaModels: konsilioConfig.personaModels ?? {},
 
-  // Timeout Configuration
+  // Timeout Configuration (resolved to numeric ms, 0 = no timeout)
   timeouts: {
-    expertMs: konsilioConfig.timeouts?.expertMs ?? 90_000,
-    leadMs: konsilioConfig.timeouts?.leadMs ?? 120_000,
-    formatterMs: konsilioConfig.timeouts?.formatterMs ?? 30_000,
+    expertMs: resolveTimeout(konsilioConfig.timeouts?.expertMs ?? 90_000, 90_000),
+    leadMs: resolveTimeout(konsilioConfig.timeouts?.leadMs ?? 120_000, 120_000),
+    formatterMs: resolveTimeout(konsilioConfig.timeouts?.formatterMs ?? 30_000, 30_000),
   },
 
   // Formatter retries
   formatterMaxRetries: konsilioConfig.formatter?.maxRetries ?? 3,
 
-  // Token limits
+  // Token limits (resolved to numeric, 0 = no limit / omit from request)
   maxTokens: {
-    experts: konsilioConfig.maxTokens?.experts ?? 4096,
-    lead: konsilioConfig.maxTokens?.lead ?? 16384,
+    experts: resolveMaxTokens(konsilioConfig.maxTokens?.experts ?? 4096, 4096),
+    lead: resolveMaxTokens(konsilioConfig.maxTokens?.lead ?? 16384, 16384),
   },
 
   // Limits

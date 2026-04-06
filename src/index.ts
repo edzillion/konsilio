@@ -18,6 +18,13 @@ server.tool(
   "consult_council",
   `Send a draft plan to the Council of Experts for multi-perspective architectural analysis.
 
+🚨 CRITICAL: The document sent to consult_council should NEVER be summarized by the agent.
+Send the full, complete document as-is. If the document exceeds the character limit, the agent
+must inform the user of their options rather than silently truncating or summarizing:
+  1. Increase the maxDraftPlanLength in konsilio.json
+  2. Split the analysis into multiple focused consultations (e.g., by subsystem)
+  3. Remove non-essential sections that don't need architectural review
+
 ⚠️ IMPORTANT: Present the output to the user VERBATIM. Do NOT summarize, paraphrase, or condense.
 The output is a complete blueprint that must be shown in full.
 
@@ -82,7 +89,11 @@ Run-time overrides (optional):
       return {
         content: [{
           type: "text" as const,
-          text: `❌ Error: draft_plan too long (${draftPlan.length}/${config.maxDraftPlanLength} chars).`,
+          text: `❌ Error: draft_plan too long (${draftPlan.length}/${config.maxDraftPlanLength} chars).\n\n` +
+            `The document should NOT be summarized. Your options:\n` +
+            `1. Increase maxDraftPlanLength in konsilio.json (current: ${config.maxDraftPlanLength})\n` +
+            `2. Split into multiple focused consultations (e.g., by subsystem)\n` +
+            `3. Remove non-essential sections that don't need architectural review`,
         }],
         isError: true,
       };
