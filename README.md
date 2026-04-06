@@ -1,5 +1,10 @@
 # Konsilio
 
+> 🚨 **WARNING**
+> 
+> **This project is in early development and breaking changes are expected.**
+> It has only been properly tested on Cline in VScode so other stacks may not work as expected. 
+
 [![npm version](https://img.shields.io/npm/v/konsilio.svg)](https://www.npmjs.com/package/konsilio)
 [![npm downloads](https://img.shields.io/npm/dm/konsilio.svg)](https://www.npmjs.com/package/konsilio)
 [![license](https://img.shields.io/npm/l/konsilio.svg)](LICENSE.md)
@@ -27,7 +32,7 @@ Konsilio implements a **multi-stage consulting pipeline**:
 
 **Rinse. Repeat. Rewind Selectah!**
 
-## Usage
+## Setup
 
 ```bash
 # Install
@@ -40,6 +45,26 @@ npm install -g konsilio
 # Tool: consult_council
 # Params: draft_plan, tech_stack (optional), context_constraints (optional)
 ```
+
+You will need to add the mcp server settings Cline has it's own mcp server settings like so: 
+
+```json
+{
+  "mcpServers": {
+    "konsilio": {
+      "disabled": false,
+      "timeout": 1800, //important as Cline has a default timeout of 90s.
+      "type": "stdio",
+      "command": "konsilio",
+      "env": {
+        "OPENROUTER_API_KEY": "sk-or-v1-...",
+        "LOG_LEVEL": "info"
+      }
+    }
+  }
+}
+```
+
 
 ### Example
 

@@ -18,7 +18,7 @@
     "experts": 16384,
     "lead": 32768
   },
-  "maxDraftPlanLength": 12000,
+  "maxDraftPlanLength": 24000,
   "maxHistorySessions": 10,
   "databasePath": "./data/db/konsilio.db",
   "cacheTtlSeconds": 3600
