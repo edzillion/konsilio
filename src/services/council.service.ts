@@ -210,7 +210,24 @@ export class CouncilService {
         });
         formatSuccessCount++;
       } else {
+        // Formatting failed — create a minimal structured output and preserve raw prose
+        // so the extraction phase can still extract claims from it
         formattingErrors.push(`${proseReport.persona.name}: ${result.reason}`);
+        successfulReports.push({
+          personaId: proseReport.persona.id,
+          personaName: proseReport.persona.name,
+          personaEmoji: proseReport.persona.emoji,
+          structuredOutput: {
+            personaId: proseReport.persona.id,
+            findings: [],
+            risks: [],
+            missingAssumptions: [],
+            dependencies: []
+          },
+          rawContent: proseReport.prose,
+          durationMs: proseReport.durationMs,
+          modelUsed: 'fallback'
+        });
       }
     }
 
@@ -312,9 +329,18 @@ export class CouncilService {
   private async runExtractionPhase(reports: ExpertReport[], model: string, log: Logger | CorrelatedLogger): Promise<ExtractionPhaseOutput> {
     const lead = this.deps.personaService.createLead('extraction');
 
-    const expertReportsText = reports.map(r =>
-      `## ${r.personaEmoji} ${r.personaName}\n\n${JSON.stringify(r.structuredOutput, null, 2)}`
-    ).join('\n\n---\n\n');
+    // Build expert reports text, including raw prose for reports where formatting failed
+    const expertReportsText = reports.map(r => {
+      const hasStructuredFindings = r.structuredOutput.findings.length > 0 || r.structuredOutput.risks.length > 0;
+      let text = `## ${r.personaEmoji} ${r.personaName}\n\n`;
+      if (hasStructuredFindings) {
+        text += JSON.stringify(r.structuredOutput, null, 2);
+      } else {
+        // Formatting failed for this expert — pass raw prose so extraction can still work
+        text += `**Note: Structured formatting failed for this expert. Extract findings from the raw prose below.**\n\n${r.rawContent}`;
+      }
+      return text;
+    }).join('\n\n---\n\n');
 
     const messages: Message[] = [
       { role: 'system', content: lead.systemPrompt },
@@ -332,6 +358,12 @@ export class CouncilService {
     const cleaned = this.cleanJsonOutput(rawOutput);
     try {
       const parsed = JSON.parse(cleaned);
+      // Normalize: convert string contexts to objects for downstream consistency
+      for (const claim of parsed.claims ?? []) {
+        if (typeof claim.context === 'string') {
+          claim.context = { summary: claim.context };
+        }
+      }
       const output = ExtractionPhaseOutputSchema.parse(parsed);
       log.debug('Extraction complete', { totalFindings: output.totalFindings });
       return output;

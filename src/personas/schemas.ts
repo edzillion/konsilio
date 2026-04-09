@@ -33,7 +33,7 @@ export const ExtractedClaimSchema = z.object({
   personaId: z.string(),
   findingId: z.string(),
   claim: z.string(),
-  context: z.record(z.string(), z.unknown())
+  context: z.union([z.record(z.string(), z.unknown()), z.string()])
 });
 
 export const ExtractionPhaseOutputSchema = z.object({
