@@ -174,7 +174,7 @@ export const config = {
   timeouts: {
     expertMs: resolveTimeout(konsilioConfig.timeouts?.expertMs ?? 90_000, 90_000),
     leadMs: resolveTimeout(konsilioConfig.timeouts?.leadMs ?? 120_000, 120_000),
-    formatterMs: resolveTimeout(konsilioConfig.timeouts?.formatterMs ?? 30_000, 30_000),
+    formatterMs: resolveTimeout(konsilioConfig.timeouts?.formatterMs ?? 90_000, 90_000),
   },
 
   // Formatter retries
